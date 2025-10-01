@@ -1,6 +1,10 @@
 streamlit
-numpy
 pandas
+numpy
 joblib
+scikit-learn
 matplotlib
+seaborn
+requests
+PyPDF2
 scikit-learn
