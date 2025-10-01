@@ -9,6 +9,6 @@ requests
 PyPDF2
 scikit-learn
 huggingface_hub>=1.26.1
-pip install --upgrade huggingface_hub
+
 
 
