@@ -1082,7 +1082,7 @@ with tab2:
             with col2:
                 st.metric("Data Columns", len(current_data.columns))
             with col3:
-                completeness = 100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100
+                completeness = 100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100)
                 st.metric("Data Completeness", f"{completeness:.1f}%")
             with col4:
                 st.metric("Analysis Date", datetime.now().strftime('%Y-%m-%d'))
