@@ -167,7 +167,6 @@ with tab2:
 # -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
-    st.write("Secrets loaded:", st.secrets)
 
     if client:
         user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
