@@ -166,10 +166,9 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    response = client.text_generation(  
+                    response = client.text2text_generation(  
                         prompt=user_input,
-                        max_new_tokens=200,
-                        temperature=0.7
+                        max_new_tokens=200
                     )
                     st.markdown(f"**Assistant:** {response}")
                 except Exception as e:
