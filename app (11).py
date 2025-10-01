@@ -164,20 +164,20 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    response = client.text_generation(
-                        prompt=user_input,
-                        max_new_tokens=200,
-                        temperature=0.7
+                    response = client.chat(
+                        model="mistralai/Mistral-7B-Instruct-v0.2",
+                        messages=[{"role": "user", "content": user_input}]
                     )
-                    # Extract the generated text
-                    generated_text = response[0]['generated_text'] if isinstance(response, list) else response
-                    st.markdown(f"**Assistant:** {generated_text}")
+                    # The model reply is under 'content'
+                    reply_text = response['message']['content']
+                    st.markdown(f"**Assistant:** {reply_text}")
 
                 except Exception as e:
                     st.error(f"❌ Chatbot failed to respond: {e}")
                     st.markdown("If this issue persists, contact the dashboard administrator.")
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
+
 
 
 # Footer
