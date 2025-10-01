@@ -156,32 +156,29 @@ with tab2:
         st.pyplot(fig)
 
 # -------------------------------
-# TAB 3: Chatbot (Streaming)
-# -------------------------------
 with tab3:
-    st.subheader("💬 Guideline Chatbot (Streaming)")
+    st.subheader("💬 Guideline Chatbot")
 
     if client:
         user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    chat_placeholder = st.empty()
-                    output_text = ""
-
-                    for chunk in client.text_generation_stream(
+                    response = client.text_generation(
                         prompt=user_input,
                         max_new_tokens=200,
                         temperature=0.7
-                    ):
-                        output_text += chunk.get('generated_text', '')
-                        chat_placeholder.markdown(f"**Assistant:** {output_text}")
+                    )
+                    # Extract the generated text
+                    generated_text = response[0]['generated_text'] if isinstance(response, list) else response
+                    st.markdown(f"**Assistant:** {generated_text}")
 
                 except Exception as e:
                     st.error(f"❌ Chatbot failed to respond: {e}")
                     st.markdown("If this issue persists, contact the dashboard administrator.")
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
+
 
 # Footer
 st.markdown("---")
