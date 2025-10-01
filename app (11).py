@@ -164,12 +164,14 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    response = client.chat(
+                    # For conversational models, use client.chat.create()
+                    response = client.chat.create(
                         model="mistralai/Mistral-7B-Instruct-v0.2",
                         messages=[{"role": "user", "content": user_input}]
                     )
-                    # The model reply is under 'content'
-                    reply_text = response['message']['content']
+
+                    # Extract the assistant's reply
+                    reply_text = response.choices[0].message.content
                     st.markdown(f"**Assistant:** {reply_text}")
 
                 except Exception as e:
@@ -177,6 +179,7 @@ with tab3:
                     st.markdown("If this issue persists, contact the dashboard administrator.")
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
+
 
 
 
