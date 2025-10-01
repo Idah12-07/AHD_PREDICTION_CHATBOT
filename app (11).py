@@ -236,7 +236,7 @@ class HIVExpertChatbot:
             return self._get_who_staging()
 
         elif any(word in user_input for word in ["hello", "hi", "hey", "greetings"]):
-            return self._get_greeting()
+            return "Hello! I'm your HIV/AIDS expert assistant. How can I help you with HIV-related questions today?"
 
         else:
             return self._get_comprehensive_response(user_input)
@@ -449,59 +449,18 @@ class HIVExpertChatbot:
 - Determines ART urgency
 - Predicts disease progression"""
 
-    def _get_greeting(self):
-        return """👋 **Hello! I'm your Comprehensive HIV/AIDS Expert Assistant**
-
-I can help you with **any topic related to HIV/AIDS**, including:
-
-🔬 **Basic Science & Definitions**
-• HIV virology and pathophysiology  
-• CD4 cells and immune function
-• Viral load dynamics
-
-💊 **Treatment & Medications**
-• ART regimens (1st, 2nd, 3rd line)
-• Drug classes and mechanisms
-• Side effect management
-
-🛡️ **Prevention & Testing**
-• Transmission routes and prevention
-• PrEP, PEP, and condom use
-• Testing technologies
-
-📊 **Epidemiology & Statistics**
-• Global, African, and Kenyan statistics
-• Prevalence and incidence rates
-
-🏥 **Clinical Management**
-• WHO staging system
-• Opportunistic infections
-• AHD diagnosis and management
-
-**What would you like to know about today?**"""
-
     def _get_comprehensive_response(self, user_input):
-        return f"""🤔 **I want to provide you with the most accurate information about:** "{user_input}"
+        return f"""I want to provide you with accurate information about HIV/AIDS. 
 
-I specialize in **comprehensive HIV/AIDS knowledge** including:
+I specialize in topics like:
+• HIV treatment guidelines and ART regimens
+• Prevention strategies (PrEP, PEP, condoms)
+• Testing and diagnosis  
+• WHO clinical staging
+• Opportunistic infections
+• Epidemiology and statistics
 
-• **Basic virology and immunology**
-• **Treatment guidelines and ART regimens** 
-• **Prevention strategies (PrEP, PEP, condoms)**
-• **Testing and diagnosis**
-• **WHO clinical staging**
-• **Opportunistic infections**
-• **Epidemiology and statistics**
-
-**Could you please rephrase your question or ask about one of these specific HIV/AIDS topics?**
-
-💡 **Try asking:**
-• "What are the current first-line ART regimens?"
-• "How does HIV transmission occur?"
-• "What statistics are available for Kenya?"
-• "Explain WHO staging system"
-• "What is the difference between HIV and AIDS?"
-• "How effective is PrEP for prevention?" """
+Could you please rephrase your question or ask about one of these specific HIV/AIDS topics?"""
 
 # -------------------------------
 # ENHANCED ANALYTICS DASHBOARD CLASS
@@ -667,7 +626,7 @@ chatbot = HIVExpertChatbot()
 analytics_engine = ClinicAnalytics()
 
 # -------------------------------
-# CREATE TABS - THIS MUST COME AFTER ALL CLASS DEFINITIONS
+# CREATE TABS
 # -------------------------------
 tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Analytics", "💬 HIV Expert Chatbot"])
 
@@ -835,6 +794,7 @@ with tab2:
     if current_data is not None:
         st.markdown("---")
         
+        # Perform analysis
         with st.spinner("🔍 Analyzing clinic data..."):
             analysis = analytics_engine.analyze_clinic_data(current_data)
             insights = analytics_engine.generate_insights(analysis, current_data)
@@ -879,84 +839,375 @@ with tab2:
             )
             st.caption("Missed ≤1 visit")
         
-        # Insights and Recommendations - IMPROVED VISIBILITY
+        # Insights and Recommendations - FIXED VISIBILITY
         st.markdown("### 💡 Smart Insights & Recommendations")
         
         if insights:
             for insight in insights:
-                # Use different background colors based on severity
+                # Use different background colors and better styling based on severity
                 if 'CRITICAL' in insight['type']:
-                    bg_color = '#ffebee'  # Light red
-                    border_color = '#f44336'
+                    bg_color = '#ffebee'  # Light red background
+                    border_color = '#d32f2f'  # Dark red border
+                    text_color = '#b71c1c'  # Dark red text
+                    icon = '🚨'
                 elif 'WARNING' in insight['type']:
-                    bg_color = '#fff3e0'  # Light orange
-                    border_color = '#ff9800'
+                    bg_color = '#fff3e0'  # Light orange background
+                    border_color = '#f57c00'  # Orange border
+                    text_color = '#e65100'  # Dark orange text
+                    icon = '⚠️'
                 elif 'TARGETED' in insight['type']:
-                    bg_color = '#e8f5e8'  # Light green
-                    border_color = '#4caf50'
-                else:
-                    bg_color = '#e3f2fd'  # Light blue
-                    border_color = '#2196f3'
+                    bg_color = '#e8f5e8'  # Light green background
+                    border_color = '#388e3c'  # Green border
+                    text_color = '#1b5e20'  # Dark green text
+                    icon = '🎯'
+                else:  # MONITOR
+                    bg_color = '#e3f2fd'  # Light blue background
+                    border_color = '#1976d2'  # Blue border
+                    text_color = '#0d47a1'  # Dark blue text
+                    icon = '📊'
                 
                 st.markdown(f"""
                 <div style='
-                    padding: 15px; 
-                    border-radius: 10px; 
-                    border-left: 5px solid {border_color}; 
+                    padding: 16px; 
+                    border-radius: 8px; 
+                    border-left: 6px solid {border_color}; 
                     background-color: {bg_color}; 
-                    margin: 10px 0;
-                    border: 1px solid {border_color}20;
+                    margin: 12px 0;
+                    border: 1px solid {border_color}40;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 '>
-                <h4 style='margin: 0 0 10px 0; color: {border_color};'>{insight['type']}: {insight['title']}</h4>
-                <p style='margin: 0 0 10px 0; font-weight: bold;'>{insight['message']}</p>
-                <p style='margin: 0; font-style: italic;'>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
+                <div style='display: flex; align-items: center; margin-bottom: 8px;'>
+                    <span style='font-size: 20px; margin-right: 8px;'>{icon}</span>
+                    <h4 style='margin: 0; color: {text_color}; font-weight: bold;'>{insight['type']}: {insight['title']}</h4>
+                </div>
+                <p style='margin: 8px 0; font-size: 16px; font-weight: 600; color: #333;'>{insight['message']}</p>
+                <div style='display: flex; align-items: center; margin-top: 12px; padding: 8px; background-color: rgba(255,255,255,0.7); border-radius: 4px;'>
+                    <span style='font-size: 18px; margin-right: 8px;'>💡</span>
+                    <p style='margin: 0; font-style: normal; font-weight: 500; color: #555;'><strong>Recommendation:</strong> {insight['recommendation']}</p>
+                </div>
                 </div>
                 """, unsafe_allow_html=True)
         else:
             st.success("🎉 Excellent! Your clinic is meeting or exceeding most performance targets!")
         
-        # Rest of analytics content would go here...
-        # ... [rest of the analytics tab content] ...
+        # Detailed Analysis Section
+        st.markdown("### 📊 Detailed Analysis")
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["Clinical Health", "Patient Demographics", "Treatment Patterns", "Data Explorer"])
+        
+        with tab1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**CD4 Count Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create CD4 categories
+                cd4_bins = [0, 200, 350, 500, float('inf')]
+                cd4_labels = ['Critical (<200)', 'Advanced (200-350)', 'Good (350-500)', 'Excellent (>500)']
+                current_data['CD4_Category'] = pd.cut(current_data['CD4_Count'], bins=cd4_bins, labels=cd4_labels)
+                
+                cd4_counts = current_data['CD4_Category'].value_counts().reindex(cd4_labels)
+                colors = ['#ff4444', '#ffaa00', '#66bb6a', '#2e7d32']
+                
+                bars = ax.bar(cd4_labels, cd4_counts.values, color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+                ax.set_ylabel('Number of Patients', fontweight='bold')
+                ax.set_title('CD4 Health Distribution', fontweight='bold', fontsize=14)
+                plt.xticks(rotation=45, ha='right')
+                ax.grid(axis='y', alpha=0.3)
+                
+                # Add value labels
+                for bar, count in zip(bars, cd4_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                
+                st.pyplot(fig)
+                
+                # CD4 insights
+                with st.expander("📋 CD4 Insights"):
+                    critical_pct = (current_data['CD4_Count'] < 200).mean() * 100
+                    excellent_pct = (current_data['CD4_Count'] >= 500).mean() * 100
+                    st.write(f"""
+                    - **Critical CD4 (<200)**: {critical_pct:.1f}% of patients
+                    - **Excellent CD4 (≥500)**: {excellent_pct:.1f}% of patients  
+                    - **Average CD4**: {analysis['avg_cd4']:.0f} cells/mm³
+                    - **Clinical Goal**: >85% patients with CD4 >350 cells/mm³
+                    """)
+            
+            with col2:
+                st.write("**Viral Load Status**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create VL categories
+                vl_bins = [0, 50, 1000, 10000, float('inf')]
+                vl_labels = ['Undetectable (<50)', 'Suppressed (50-1000)', 'Unsuppressed (1000-10000)', 'High (>10000)']
+                current_data['VL_Category'] = pd.cut(current_data['Viral_Load'], bins=vl_bins, labels=vl_labels)
+                
+                vl_counts = current_data['VL_Category'].value_counts().reindex(vl_labels)
+                colors = ['#2e7d32', '#66bb6a', '#ffaa00', '#ff4444']
+                
+                bars = ax.bar(vl_labels, vl_counts.values, color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+                ax.set_ylabel('Number of Patients', fontweight='bold')
+                ax.set_title('Viral Load Control', fontweight='bold', fontsize=14)
+                plt.xticks(rotation=45, ha='right')
+                ax.grid(axis='y', alpha=0.3)
+                
+                # Add value labels
+                for bar, count in zip(bars, vl_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                
+                st.pyplot(fig)
+                
+                # VL insights
+                with st.expander("📋 Viral Load Insights"):
+                    suppressed_pct = analysis['viral_suppression']
+                    undetectable_pct = analysis['undetectable']
+                    st.write(f"""
+                    - **Suppressed (<1000)**: {suppressed_pct:.1f}% of patients
+                    - **Undetectable (<50)**: {undetectable_pct:.1f}% of patients
+                    - **WHO Target**: >90% viral suppression
+                    - **Gap to Target**: {max(0, 90 - suppressed_pct):.1f}%
+                    """)
+        
+        with tab2:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Age Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Age'], bins=15, alpha=0.7, color='#2196f3', edgecolor='black')
+                ax.set_xlabel('Age (years)')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Patient Age Distribution', fontweight='bold')
+                ax.axvline(current_data['Age'].mean(), color='red', linestyle='--', linewidth=2, 
+                          label=f"Mean: {current_data['Age'].mean():.1f} years")
+                ax.legend()
+                ax.grid(alpha=0.3)
+                st.pyplot(fig)
+                
+                # Age insights
+                with st.expander("📋 Age Insights"):
+                    young_patients = current_data[current_data['Age'] < 25]
+                    older_patients = current_data[current_data['Age'] > 50]
+                    st.write(f"""
+                    - **Young patients (18-25)**: {len(young_patients)} patients ({len(young_patients)/len(current_data)*100:.1f}%)
+                    - **Older patients (50+)**: {len(older_patients)} patients ({len(older_patients)/len(current_data)*100:.1f}%)
+                    - **Average age**: {current_data['Age'].mean():.1f} years
+                    - **Age range**: {current_data['Age'].min()} - {current_data['Age'].max()} years
+                    """)
+            
+            with col2:
+                st.write("**Gender Distribution**")
+                gender_counts = current_data['Gender'].value_counts()
+                fig, ax = plt.subplots(figsize=(8, 6))
+                colors = ['#64b5f6', '#f06292']  # Blue for Male, Pink for Female
+                wedges, texts, autotexts = ax.pie(gender_counts.values, labels=gender_counts.index, autopct='%1.1f%%', 
+                      colors=colors, startangle=90)
+                ax.set_title('Patient Gender Distribution', fontweight='bold')
+                
+                # Improve autopct styling
+                for autotext in autotexts:
+                    autotext.set_color('white')
+                    autotext.set_fontweight('bold')
+                    autotext.set_fontsize(10)
+                
+                st.pyplot(fig)
+                
+                # Gender insights
+                with st.expander("📋 Gender Insights"):
+                    for gender, count in gender_counts.items():
+                        pct = count / len(current_data) * 100
+                        st.write(f"- **{gender}**: {count} patients ({pct:.1f}%)")
+        
+        with tab3:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**ART Regimen Distribution**")
+                regimen_counts = current_data['ART_Regimen'].value_counts()
+                fig, ax = plt.subplots(figsize=(10, 6))
+                colors = plt.cm.Set3(np.linspace(0, 1, len(regimen_counts)))
+                wedges, texts, autotexts = ax.pie(regimen_counts.values, labels=regimen_counts.index, autopct='%1.1f%%', 
+                                                 startangle=90, colors=colors)
+                ax.set_title('ART Regimen Usage', fontweight='bold')
+                
+                # Improve autopct styling
+                for autotext in autotexts:
+                    autotext.set_color('black')
+                    autotext.set_fontweight('bold')
+                
+                st.pyplot(fig)
+                
+                # Regimen insights
+                with st.expander("📋 Regimen Insights"):
+                    st.write("**Most Common Regimens:**")
+                    for regimen, count in regimen_counts.head(3).items():
+                        pct = count / len(current_data) * 100
+                        st.write(f"- {regimen}: {pct:.1f}%")
+            
+            with col2:
+                st.write("**Treatment Duration**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Months_on_ART'], bins=20, alpha=0.7, color='#4caf50', edgecolor='black')
+                ax.set_xlabel('Months on ART')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Treatment Duration Distribution', fontweight='bold')
+                ax.axvline(current_data['Months_on_ART'].mean(), color='red', linestyle='--', linewidth=2,
+                          label=f"Mean: {current_data['Months_on_ART'].mean():.1f} months")
+                ax.legend()
+                ax.grid(alpha=0.3)
+                st.pyplot(fig)
+                
+                # Treatment duration insights
+                with st.expander("📋 Treatment Duration Insights"):
+                    new_patients = (current_data['Months_on_ART'] < 6).sum()
+                    experienced_patients = (current_data['Months_on_ART'] >= 12).sum()
+                    st.write(f"""
+                    - **New patients (<6 months)**: {new_patients} ({new_patients/len(current_data)*100:.1f}%)
+                    - **Experienced (≥12 months)**: {experienced_patients} ({experienced_patients/len(current_data)*100:.1f}%)
+                    - **Average duration**: {current_data['Months_on_ART'].mean():.1f} months
+                    - **Longest duration**: {current_data['Months_on_ART'].max()} months
+                    """)
+        
+        with tab4:
+            st.write("**Patient Data Explorer**")
+            
+            # Data summary
+            st.write("**Data Summary:**")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Patients", len(current_data))
+            with col2:
+                st.metric("Data Columns", len(current_data.columns))
+            with col3:
+                completeness = 100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100
+                st.metric("Data Completeness", f"{completeness:.1f}%")
+            with col4:
+                st.metric("Analysis Date", datetime.now().strftime('%Y-%m-%d'))
+            
+            # Interactive dataframe
+            st.dataframe(current_data, use_container_width=True, height=400)
+            
+            # Data quality insights
+            with st.expander("📋 Data Quality Report"):
+                missing_data = current_data.isnull().sum()
+                if missing_data.sum() > 0:
+                    st.warning("⚠️ **Missing Data Detected:**")
+                    for col, missing_count in missing_data[missing_data > 0].items():
+                        missing_pct = (missing_count / len(current_data)) * 100
+                        st.write(f"- {col}: {missing_count} missing values ({missing_pct:.1f}%)")
+                else:
+                    st.success("✅ **Excellent Data Quality**: No missing values detected")
+        
+        # Export Section
+        st.markdown("---")
+        st.markdown("### 📥 Export Analysis Report")
+        
+        # Generate comprehensive report
+        report_text = f"""
+CLINIC PERFORMANCE ANALYSIS REPORT
+==================================
+Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+Data Source: {data_source}
+Total Patients Analyzed: {len(current_data)}
+
+KEY PERFORMANCE INDICATORS:
+---------------------------
+• Viral Suppression Rate: {analysis['viral_suppression']:.1f}% (Target: 90%)
+• AHD Prevalence: {analysis['ahd_cases']:.1f}% 
+• Average CD4 Count: {analysis['avg_cd4']:.0f} cells/mm³
+• Patient Retention: {analysis['good_retention']:.1f}%
+• New Patients (<6 months ART): {analysis['new_patients']:.1f}%
+
+CLINICAL INSIGHTS:
+------------------
+• Total patients with critical CD4 (<200): {(current_data['CD4_Count'] < 200).sum()}
+• Patients with undetectable viral load: {(current_data['Viral_Load'] < 50).sum()}
+• Average treatment duration: {analysis['avg_art_duration']:.1f} months
+• Patients with poor retention: {(current_data['Missed_Visits'] > 2).sum()}
+
+RECOMMENDATIONS:
+----------------
+"""
+        
+        for i, insight in enumerate(insights, 1):
+            report_text += f"\n{i}. {insight['recommendation']}"
+        
+        report_text += f"""
+
+DATA QUALITY SUMMARY:
+---------------------
+• Total records: {len(current_data)}
+• Data completeness: {completeness:.1f}%
+• Analysis period: Up to {datetime.now().strftime('%B %Y')}
+
+---
+Report generated by AHD Copilot Analytics Dashboard
+For clinical decision support only
+"""
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                label="📄 Download Comprehensive Report",
+                data=report_text,
+                file_name=f"clinic_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+                mime="text/plain",
+                use_container_width=True
+            )
+        
+        with col2:
+            # Convert DataFrame to CSV for download
+            csv = current_data.to_csv(index=False)
+            st.download_button(
+                label="📊 Download Raw Data (CSV)",
+                data=csv,
+                file_name=f"clinic_analysis_data_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    
+    else:
+        # No data loaded - show instructions
+        st.markdown("---")
+        st.markdown("""
+        ### 🚀 How to Use This Dashboard
+        
+        1. **Upload Your Data**: Click 'Browse files' to upload your clinic's CSV data
+        2. **Try Sample Data**: Select a sample clinic to see how the analysis works
+        3. **Get Insights**: The dashboard will automatically analyze and provide recommendations
+        
+        ### 📋 Expected Data Format
+        Your CSV file should include these columns:
+        ```
+        Patient_ID, Age, Gender, CD4_Count, Viral_Load, WHO_Stage, 
+        Months_on_ART, ART_Regimen, Missed_Visits
+        ```
+        """)
 
 # -------------------------------
-# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - NOW PROPERLY PLACED
+# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - IMPROVED LAYOUT
 # -------------------------------
 with tab3:
-    st.subheader("💬 Comprehensive HIV/AIDS Expert Chatbot")
-    st.info("🔬 **Ask me anything about HIV/AIDS** - Science, Treatment, Prevention, Statistics, Guidelines, Clinical Management")
+    st.subheader("💬 HIV/AIDS Expert Chatbot")
+    st.info("🔬 **Ask me anything about HIV/AIDS** - Treatment, Prevention, Guidelines, Statistics, Clinical Management")
     
-    # Initialize chat history
+    # Initialize chat history - SIMPLIFIED GREETING
     if "messages" not in st.session_state:
         st.session_state.messages = [
-            {"role": "assistant", "content": chatbot._get_greeting()}
+            {"role": "assistant", "content": "Hello! I'm your HIV/AIDS expert assistant. Ask me anything about HIV treatment, prevention, guidelines, or statistics."}
         ]
     
-    # Display chat messages
+    # Display chat messages FIRST (conversation at the top)
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    # Chat input
-    if prompt := st.chat_input("Ask any HIV/AIDS question..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        # Generate assistant response
-        with st.chat_message("assistant"):
-            message_placeholder = st.empty()
-            message_placeholder.markdown("🔍 Researching comprehensive information...")
-            
-            # Get response from expert chatbot
-            response = chatbot.get_response(prompt)
-            message_placeholder.markdown(response)
-            
-            # Add assistant response to chat history
-            st.session_state.messages.append({"role": "assistant", "content": response})
-    
-    # Quick action buttons - IMPROVED VISIBILITY
-    st.markdown("### 🚀 Quick Access Topics")
+    # Quick action buttons BELOW the conversation
+    st.markdown("### 💡 Quick Questions")
     
     col1, col2, col3 = st.columns(3)
     
@@ -993,10 +1244,31 @@ with tab3:
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_statistics("global")})
             st.rerun()
     
-    # Clear chat button
-    if st.button("🗑️ Clear Chat History", use_container_width=True, type="primary"):
+    # Chat input AT THE BOTTOM (natural conversation flow)
+    st.markdown("---")
+    if prompt := st.chat_input("Type your HIV-related question here..."):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Generate assistant response
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            message_placeholder.markdown("Thinking...")
+            
+            # Get response from expert chatbot
+            response = chatbot.get_response(prompt)
+            message_placeholder.markdown(response)
+            
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    # Clear chat button at the very bottom
+    st.markdown("---")
+    if st.button("🗑️ Clear Conversation", use_container_width=True, type="primary"):
         st.session_state.messages = [
-            {"role": "assistant", "content": chatbot._get_greeting()}
+            {"role": "assistant", "content": "Hello! I'm your HIV/AIDS expert assistant. Ask me anything about HIV treatment, prevention, guidelines, or statistics."}
         ]
         st.rerun()
 
