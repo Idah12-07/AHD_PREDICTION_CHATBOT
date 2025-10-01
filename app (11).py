@@ -30,21 +30,25 @@ except Exception as e:
     model_loaded = False
 
 # -------------------------------
-# Hugging Face Chatbot Setup
-# -------------------------------
-# -------------------------------
-# Hugging Face Chatbot Setup
+# Hugging Face Chatbot Setup - FIXED
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(token=HF_TOKEN, model="openai-community/gpt2")
-  # or flan-t5-small if preferred
-    st.success("✅ Hugging Face client initialized.")
+    
+    # Try different models - starting with a more reliable one
+    # Option 1: Use a model that's known to work well with the inference API
+    MODEL_NAME = "microsoft/DialoGPT-medium"  # Good for conversational AI
+    # MODEL_NAME = "gpt2"  # Basic GPT-2
+    # MODEL_NAME = "google/flan-t5-small"  # Alternative if others fail
+    
+    client = InferenceClient(token=HF_TOKEN)
+    st.success(f"✅ Hugging Face client initialized with model: {MODEL_NAME}")
+    
 except Exception as e:
     client = None
+    MODEL_NAME = None
     st.warning("⚠️ Hugging Face client failed to initialize.")
     st.error(f"Details: {e}")
-
 
 # -------------------------------
 # Tabs
@@ -160,45 +164,81 @@ with tab2:
         st.pyplot(fig)
 
 # -------------------------------
-# TAB 3: Chatbot (Hugging Face LLM)
-# -------------------------------
-# -------------------------------
-# TAB 3: Chatbot (Hugging Face LLM)
+# TAB 3: Chatbot - IMPROVED VERSION
 # -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
-
-    if client:
-        user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
-        if st.button("Send") and user_input:
-            with st.spinner("Thinking..."):
+    
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Ask about HIV/AHD guidelines..."):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Generate assistant response
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            message_placeholder.markdown("Thinking...")
+            
+            if client and MODEL_NAME:
                 try:
-                    # Call the model correctly for latest Hugging Face API
+                    # Enhanced prompt for medical context
+                    medical_prompt = f"""You are a medical AI assistant specializing in HIV and Advanced HIV Disease (AHD) guidelines. 
+                    Provide accurate, helpful information about HIV treatment, prevention, and AHD management.
+                    
+                    Question: {prompt}
+                    
+                    Answer:"""
+                    
+                    # Call Hugging Face API
                     response = client.text_generation(
-                        prompt=user_input,        # Required
-                        max_new_tokens=200,
-                        temperature=0.7    # Supported in latest versions
+                        prompt=medical_prompt,
+                        max_new_tokens=300,
+                        temperature=0.3,  # Lower temperature for more consistent responses
+                        do_sample=True
                     )
-
-                    # Extract generated text safely
-                    if isinstance(response, list) and "generated_text" in response[0]:
-                        reply_text = response[0]["generated_text"]
-                    else:
-                        reply_text = str(response)
-
-                    st.markdown(f"**Assistant:** {reply_text}")
-
+                    
+                    # Clean up the response
+                    reply_text = response.strip()
+                    
+                    # Remove the prompt from response if it's included
+                    if medical_prompt in reply_text:
+                        reply_text = reply_text.replace(medical_prompt, "").strip()
+                    
+                    message_placeholder.markdown(reply_text)
+                    
+                    # Add assistant response to chat history
+                    st.session_state.messages.append({"role": "assistant", "content": reply_text})
+                    
                 except Exception as e:
-                    st.error(f"❌ Chatbot failed to respond: {e}")
-                    st.markdown(
-                        "If this issue persists, contact the dashboard administrator."
-                    )
-    else:
-        st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
-
-
+                    error_msg = f"❌ Chatbot failed to respond: {e}"
+                    message_placeholder.markdown(error_msg)
+                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
+                    
+                    # Debug information
+                    with st.expander("Debug Information"):
+                        st.write(f"Model: {MODEL_NAME}")
+                        st.write(f"Error details: {str(e)}")
+            else:
+                error_msg = "❌ Chatbot service is currently unavailable. Please check your Hugging Face token and model configuration."
+                message_placeholder.markdown(error_msg)
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+    
+    # Clear chat button
+    if st.button("Clear Chat History"):
+        st.session_state.messages = []
+        st.rerun()
 
 # Footer
-# -------------------------------
 st.markdown("---")
 st.markdown("<div style='text-align:center; color:gray;'>© 2025 | Built with ❤️ by <b>Idah Anyango</b></div>", unsafe_allow_html=True)
