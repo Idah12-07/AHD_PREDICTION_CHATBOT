@@ -34,7 +34,7 @@ except Exception as e:
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(api_key=HF_TOKEN, model="mistralai/Mistral-7B-Instruct-v0.2")
+    client = InferenceClient(api_key=HF_TOKEN, model="google/flan-t5-large")
 except Exception as e:
     client = None
     st.warning("⚠️ Hugging Face token not found. Chatbot tab may not work.")
