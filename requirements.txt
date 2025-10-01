@@ -8,4 +8,5 @@ seaborn
 requests
 PyPDF2
 scikit-learn
-huggingface_hub
+huggingface_hub>=0.13.0
+
