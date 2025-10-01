@@ -5,6 +5,8 @@ import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
 from huggingface_hub import InferenceClient
+import requests
+import json
 
 # -------------------------------
 # Page Config
@@ -30,25 +32,92 @@ except Exception as e:
     model_loaded = False
 
 # -------------------------------
-# Hugging Face Chatbot Setup - FIXED
+# Hugging Face Chatbot Setup - ROBUST VERSION
 # -------------------------------
-try:
-    HF_TOKEN = st.secrets["huggingface"]["token"]
-    
-    # Try different models - starting with a more reliable one
-    # Option 1: Use a model that's known to work well with the inference API
-    MODEL_NAME = "microsoft/DialoGPT-medium"  # Good for conversational AI
-    # MODEL_NAME = "gpt2"  # Basic GPT-2
-    # MODEL_NAME = "google/flan-t5-small"  # Alternative if others fail
-    
-    client = InferenceClient(token=HF_TOKEN)
-    st.success(f"✅ Hugging Face client initialized with model: {MODEL_NAME}")
-    
-except Exception as e:
-    client = None
-    MODEL_NAME = None
-    st.warning("⚠️ Hugging Face client failed to initialize.")
-    st.error(f"Details: {e}")
+def initialize_hf_client():
+    """Initialize Hugging Face client with multiple fallback options"""
+    try:
+        HF_TOKEN = st.secrets["huggingface"]["token"]
+        
+        # List of reliable models that work with Inference API
+        model_options = [
+            "microsoft/DialoGPT-medium",  # Conversational AI
+            "gpt2",  # Basic GPT-2
+            "google/flan-t5-base",  # Instruction-following model
+            "facebook/blenderbot-400M-distill",  # Chat model
+            "distilgpt2"  # Lightweight GPT-2
+        ]
+        
+        client = None
+        working_model = None
+        
+        # Try each model until one works
+        for model_name in model_options:
+            try:
+                st.info(f"🔄 Trying model: {model_name}")
+                client = InferenceClient(token=HF_TOKEN)
+                
+                # Test the model with a simple prompt
+                test_response = client.text_generation(
+                    prompt="Hello",
+                    model=model_name,
+                    max_new_tokens=10
+                )
+                
+                working_model = model_name
+                st.success(f"✅ Successfully initialized with model: {working_model}")
+                break
+                
+            except Exception as e:
+                st.warning(f"❌ Model {model_name} failed: {str(e)[:100]}...")
+                continue
+        
+        if client and working_model:
+            return client, working_model
+        else:
+            st.error("❌ All model attempts failed. Using fallback mode.")
+            return None, None
+            
+    except Exception as e:
+        st.error(f"❌ Failed to initialize Hugging Face client: {e}")
+        return None, None
+
+# Initialize the client
+client, MODEL_NAME = initialize_hf_client()
+
+# -------------------------------
+# Alternative: Direct API Call Approach
+# -------------------------------
+def query_hf_api(prompt, model_name="microsoft/DialoGPT-medium"):
+    """Alternative method using direct API calls"""
+    try:
+        HF_TOKEN = st.secrets["huggingface"]["token"]
+        API_URL = f"https://api-inference.huggingface.co/models/{model_name}"
+        headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+        
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 300,
+                "temperature": 0.3,
+                "do_sample": True
+            }
+        }
+        
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        if isinstance(result, list) and 'generated_text' in result[0]:
+            return result[0]['generated_text']
+        elif isinstance(result, dict) and 'generated_text' in result:
+            return result['generated_text']
+        else:
+            return str(result)
+            
+    except Exception as e:
+        raise Exception(f"API call failed: {e}")
 
 # -------------------------------
 # Tabs
@@ -56,7 +125,7 @@ except Exception as e:
 tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Analytics", "💬 Guideline Chatbot"])
 
 # -------------------------------
-# TAB 1: Dashboard (Prediction)
+# TAB 1: Dashboard (Prediction) - UNCHANGED
 # -------------------------------
 with tab1:
     st.subheader("📊 Patient Risk Prediction Dashboard")
@@ -74,7 +143,7 @@ with tab1:
         sex = st.sidebar.selectbox("Sex", ["Female", "Male"])
         st.sidebar.markdown("---")
 
-        # Derived features
+        # Derived features (unchanged)
         bmi = weight / ((height / 100) ** 2) if height > 0 else 0
         cd4_missing = 0 if cd4 > 0 else 1
         vl_missing = 0 if vl > 0 else 1
@@ -137,7 +206,7 @@ with tab1:
                 st.write(X_input.T)
 
 # -------------------------------
-# TAB 2: Analytics (Sample)
+# TAB 2: Analytics (Sample) - UNCHANGED
 # -------------------------------
 with tab2:
     st.subheader("📈 Analytics Overview")
@@ -164,7 +233,7 @@ with tab2:
         st.pyplot(fig)
 
 # -------------------------------
-# TAB 3: Chatbot - IMPROVED VERSION
+# TAB 3: Chatbot - COMPLETELY FIXED VERSION
 # -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
@@ -190,54 +259,88 @@ with tab3:
             message_placeholder = st.empty()
             message_placeholder.markdown("Thinking...")
             
-            if client and MODEL_NAME:
-                try:
-                    # Enhanced prompt for medical context
-                    medical_prompt = f"""You are a medical AI assistant specializing in HIV and Advanced HIV Disease (AHD) guidelines. 
-                    Provide accurate, helpful information about HIV treatment, prevention, and AHD management.
-                    
-                    Question: {prompt}
-                    
-                    Answer:"""
-                    
-                    # Call Hugging Face API
-                    response = client.text_generation(
-                        prompt=medical_prompt,
-                        max_new_tokens=300,
-                        temperature=0.3,  # Lower temperature for more consistent responses
-                        do_sample=True
-                    )
-                    
-                    # Clean up the response
-                    reply_text = response.strip()
-                    
-                    # Remove the prompt from response if it's included
-                    if medical_prompt in reply_text:
-                        reply_text = reply_text.replace(medical_prompt, "").strip()
-                    
-                    message_placeholder.markdown(reply_text)
-                    
-                    # Add assistant response to chat history
-                    st.session_state.messages.append({"role": "assistant", "content": reply_text})
-                    
-                except Exception as e:
-                    error_msg = f"❌ Chatbot failed to respond: {e}"
-                    message_placeholder.markdown(error_msg)
-                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
-                    
-                    # Debug information
-                    with st.expander("Debug Information"):
-                        st.write(f"Model: {MODEL_NAME}")
-                        st.write(f"Error details: {str(e)}")
-            else:
-                error_msg = "❌ Chatbot service is currently unavailable. Please check your Hugging Face token and model configuration."
+            try:
+                # Enhanced medical context prompt
+                medical_prompt = f"""As a medical AI assistant specializing in HIV and Advanced HIV Disease (AHD), provide accurate information about:
+
+- HIV treatment guidelines
+- AHD diagnosis and management
+- CD4 count interpretation
+- Viral load monitoring
+- WHO staging
+- ART regimens
+- Prevention strategies
+
+Question: {prompt}
+
+Provide a concise, clinically relevant answer:"""
+
+                # Try multiple approaches
+                reply_text = None
+                
+                # Approach 1: Use InferenceClient with explicit model parameter
+                if client and MODEL_NAME:
+                    try:
+                        response = client.text_generation(
+                            prompt=medical_prompt,
+                            model=MODEL_NAME,  # Explicitly specify model
+                            max_new_tokens=300,
+                            temperature=0.3,
+                            do_sample=True
+                        )
+                        reply_text = response.strip()
+                    except Exception as e:
+                        st.warning(f"Client approach failed, trying API direct: {e}")
+                
+                # Approach 2: Direct API call
+                if not reply_text:
+                    try:
+                        reply_text = query_hf_api(medical_prompt, "microsoft/DialoGPT-medium")
+                    except Exception as e:
+                        st.warning(f"API direct approach failed: {e}")
+                
+                # Approach 3: Final fallback
+                if not reply_text:
+                    reply_text = f"""I'm currently experiencing technical difficulties with my AI model. 
+
+For accurate HIV/AHD guidelines, please consult:
+- WHO Consolidated HIV Guidelines
+- National HIV Treatment Guidelines
+- CDC HIV Clinical Guidelines
+
+For your question about "{prompt}", please refer to the latest WHO clinical guidelines for HIV treatment and AHD management."""
+
+                # Clean up response
+                if medical_prompt in reply_text:
+                    reply_text = reply_text.replace(medical_prompt, "").strip()
+                
+                message_placeholder.markdown(reply_text)
+                st.session_state.messages.append({"role": "assistant", "content": reply_text})
+                
+            except Exception as e:
+                error_msg = f"""I apologize, but I'm having technical issues at the moment. 
+
+Error details: {str(e)}
+
+For immediate assistance with HIV/AHD guidelines, please consult:
+- Your institutional protocol
+- WHO HIV guidelines
+- National Ministry of Health guidelines"""
+                
                 message_placeholder.markdown(error_msg)
                 st.session_state.messages.append({"role": "assistant", "content": error_msg})
     
-    # Clear chat button
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
-        st.rerun()
+    # Clear chat and model selection
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Clear Chat History"):
+            st.session_state.messages = []
+            st.rerun()
+    
+    with col2:
+        if st.button("Reinitialize Chatbot"):
+            st.session_state.client, st.session_state.MODEL_NAME = initialize_hf_client()
+            st.rerun()
 
 # Footer
 st.markdown("---")
