@@ -8,3 +8,4 @@ seaborn
 requests
 PyPDF2
 scikit-learn
+huggingface_hub
