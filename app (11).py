@@ -750,6 +750,8 @@ with tab1:
 # -------------------------------
 # TAB 2: Enhanced Analytics Dashboard
 # -------------------------------
+# TAB 2: Enhanced Analytics Dashboard
+# -------------------------------
 with tab2:
     st.subheader("🏥 Clinic Performance Analytics Dashboard")
     
@@ -839,7 +841,7 @@ with tab2:
             )
             st.caption("Missed ≤1 visit")
         
-        # Insights and Recommendations - FIXED VISIBILITY
+        # Insights and Recommendations
         st.markdown("### 💡 Smart Insights & Recommendations")
         
         if insights:
@@ -893,9 +895,9 @@ with tab2:
         # Detailed Analysis Section
         st.markdown("### 📊 Detailed Analysis")
         
-        tab1, tab2, tab3, tab4 = st.tabs(["Clinical Health", "Patient Demographics", "Treatment Patterns", "Data Explorer"])
+        tab_analytics1, tab_analytics2, tab_analytics3, tab_analytics4 = st.tabs(["Clinical Health", "Patient Demographics", "Treatment Patterns", "Data Explorer"])
         
-        with tab1:
+        with tab_analytics1:
             col1, col2 = st.columns(2)
             
             with col1:
@@ -970,7 +972,7 @@ with tab2:
                     - **Gap to Target**: {max(0, 90 - suppressed_pct):.1f}%
                     """)
         
-        with tab2:
+        with tab_analytics2:
             col1, col2 = st.columns(2)
             
             with col1:
@@ -1020,7 +1022,7 @@ with tab2:
                         pct = count / len(current_data) * 100
                         st.write(f"- **{gender}**: {count} patients ({pct:.1f}%)")
         
-        with tab3:
+        with tab_analytics3:
             col1, col2 = st.columns(2)
             
             with col1:
@@ -1070,7 +1072,7 @@ with tab2:
                     - **Longest duration**: {current_data['Months_on_ART'].max()} months
                     """)
         
-        with tab4:
+        with tab_analytics4:
             st.write("**Patient Data Explorer**")
             
             # Data summary
@@ -1212,34 +1214,34 @@ with tab3:
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📊 Kenya Statistics", use_container_width=True, type="secondary"):
+        if st.button("📊 Kenya Statistics", use_container_width=True, type="secondary", key="kenya_stats"):
             st.session_state.messages.append({"role": "user", "content": "HIV statistics Kenya 2025"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_statistics("kenya")})
             st.rerun()
         
-        if st.button("💊 ART Regimens", use_container_width=True, type="secondary"):
+        if st.button("💊 ART Regimens", use_container_width=True, type="secondary", key="art_regimens"):
             st.session_state.messages.append({"role": "user", "content": "first line ART regimens"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_treatment_info("first_line")})
             st.rerun()
     
     with col2:
-        if st.button("🛡️ Prevention", use_container_width=True, type="secondary"):
+        if st.button("🛡️ Prevention", use_container_width=True, type="secondary", key="prevention"):
             st.session_state.messages.append({"role": "user", "content": "HIV prevention methods"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot._get_prevention_info()})
             st.rerun()
         
-        if st.button("🔬 HIV Definition", use_container_width=True, type="secondary"):
+        if st.button("🔬 HIV Definition", use_container_width=True, type="secondary", key="hiv_def"):
             st.session_state.messages.append({"role": "user", "content": "What is HIV?"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot._get_hiv_definition()})
             st.rerun()
     
     with col3:
-        if st.button("🏥 WHO Staging", use_container_width=True, type="secondary"):
+        if st.button("🏥 WHO Staging", use_container_width=True, type="secondary", key="who_staging"):
             st.session_state.messages.append({"role": "user", "content": "WHO clinical staging"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot._get_who_staging()})
             st.rerun()
         
-        if st.button("🌍 Global Stats", use_container_width=True, type="secondary"):
+        if st.button("🌍 Global Stats", use_container_width=True, type="secondary", key="global_stats"):
             st.session_state.messages.append({"role": "user", "content": "global HIV statistics"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_statistics("global")})
             st.rerun()
@@ -1264,12 +1266,11 @@ with tab3:
     
     # Clear chat button
     st.markdown("---")
-    if st.button("🗑️ Clear Conversation", use_container_width=True, type="primary"):
+    if st.button("🗑️ Clear Conversation", use_container_width=True, type="primary", key="clear_chat"):
         st.session_state.messages = [
             {"role": "assistant", "content": "Hello! I'm your HIV/AIDS expert assistant. Ask me anything about HIV treatment, prevention, guidelines, or statistics."}
         ]
         st.rerun()
-
 # -------------------------------
 # Single Footer
 # -------------------------------
