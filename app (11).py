@@ -155,6 +155,9 @@ with tab2:
 # -------------------------------
 # TAB 3: Chatbot (Hugging Face LLM)
 # -------------------------------
+# -------------------------------
+# TAB 3: Chatbot (Hugging Face LLM)
+# -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
 
@@ -163,16 +166,16 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    # Use 'prompt' instead of 'inputs'
+                    # Call the model correctly for latest Hugging Face API
                     response = client.text_generation(
                         model="mistralai/Mistral-7B-Instruct-v0.2",
-                        prompt=user_input,        # <-- key change
-                        task="conversational",    # ensures conversational behavior
+                        prompt=user_input,        # Required
                         max_new_tokens=200,
-                        temperature=0.7
+                        temperature=0.7,
+                        task="conversational"     # Supported in latest versions
                     )
 
-                    # Extract generated text
+                    # Extract generated text safely
                     if isinstance(response, list) and "generated_text" in response[0]:
                         reply_text = response[0]["generated_text"]
                     else:
@@ -182,9 +185,12 @@ with tab3:
 
                 except Exception as e:
                     st.error(f"❌ Chatbot failed to respond: {e}")
-                    st.markdown("If this issue persists, contact the dashboard administrator.")
+                    st.markdown(
+                        "If this issue persists, contact the dashboard administrator."
+                    )
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
+
 
 
 # Footer
