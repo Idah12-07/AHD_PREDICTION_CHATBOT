@@ -32,12 +32,18 @@ except Exception as e:
 # -------------------------------
 # Hugging Face Chatbot Setup
 # -------------------------------
+# -------------------------------
+# Hugging Face Chatbot Setup
+# -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(api_key=HF_TOKEN)
+    client = InferenceClient(api_key=HF_TOKEN, model="gpt2")  # or flan-t5-small if preferred
+    st.success("✅ Hugging Face client initialized.")
 except Exception as e:
     client = None
-    st.warning("⚠️ Hugging Face token not found. Chatbot tab may not work.")
+    st.warning("⚠️ Hugging Face client failed to initialize.")
+    st.error(f"Details: {e}")
+
 
 # -------------------------------
 # Tabs
