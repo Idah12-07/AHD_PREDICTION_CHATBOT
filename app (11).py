@@ -166,6 +166,7 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 response = client.text_generation(
+                    model="mistralai/Mistral-7B-Instruct-v0.2",  
                     prompt=user_input,
                     max_new_tokens=200,
                     temperature=0.7
