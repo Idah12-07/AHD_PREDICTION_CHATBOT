@@ -37,7 +37,7 @@ except Exception as e:
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(token=HF_TOKEN, model="bigscience/bloomz-560m")
+    client = InferenceClient(token=HF_TOKEN, model="openai-community/gpt2")
   # or flan-t5-small if preferred
     st.success("✅ Hugging Face client initialized.")
 except Exception as e:
