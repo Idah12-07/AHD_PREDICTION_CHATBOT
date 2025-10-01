@@ -165,15 +165,19 @@ with tab3:
         user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
-                response = client.text_generation(
-                    model="mistralai/Mistral-7B-Instruct-v0.2",  
-                    prompt=user_input,
-                    max_new_tokens=200,
-                    temperature=0.7
-                )
-            st.markdown(f"**Assistant:** {response}")
+                try:
+                    response = client.text_generation(  
+                        prompt=user_input,
+                        max_new_tokens=200,
+                        temperature=0.7
+                    )
+                    st.markdown(f"**Assistant:** {response}")
+                except Exception as e:
+                    st.error("❌ Chatbot failed to respond. Please check your question or try again later.")
+                    st.markdown("If this issue persists, contact the dashboard administrator.")
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token.")
+
         
 
 
