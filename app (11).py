@@ -796,313 +796,511 @@ with tab1:
 
 # -------------------------------
 # -------------------------------
+import streamlit as st
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+from datetime import datetime, timedelta
+import warnings
+warnings.filterwarnings('ignore')
+
+# -------------------------------
+# ENHANCED ANALYTICS DASHBOARD
+# -------------------------------
+class ClinicAnalytics:
+    def __init__(self):
+        self.who_targets = {
+            'viral_suppression': 90,
+            'art_coverage': 95,
+            'patient_retention': 90,
+            'ahd_prevention': 85
+        }
+    
+    def generate_sample_data(self, clinic_type="urban"):
+        """Generate realistic synthetic clinic data"""
+        np.random.seed(42)
+        n_patients = 300
+        
+        if clinic_type == "urban":
+            # Urban clinic - better performance
+            base_cd4 = 350
+            suppression_rate = 0.85
+            retention_rate = 0.88
+            late_presenters = 0.12
+        else:
+            # Rural clinic - more challenges
+            base_cd4 = 280
+            suppression_rate = 0.62
+            retention_rate = 0.72
+            late_presenters = 0.25
+        
+        data = []
+        for i in range(n_patients):
+            age = np.random.normal(38, 12)
+            age = max(18, min(80, age))
+            
+            # Realistic CD4 distribution based on clinic type
+            cd4 = np.random.gamma(3, base_cd4/3)
+            cd4 = max(50, min(1200, cd4))
+            
+            # Viral load based on suppression rate
+            if np.random.random() < suppression_rate:
+                viral_load = np.random.lognormal(2.5, 0.8)  # Suppressed
+            else:
+                viral_load = np.random.lognormal(8, 1.5)    # Unsuppressed
+            viral_load = int(max(20, viral_load))
+            
+            # WHO stage correlated with CD4
+            if cd4 < 200:
+                who_stage = np.random.choice([3, 4], p=[0.6, 0.4])
+            elif cd4 < 350:
+                who_stage = np.random.choice([2, 3], p=[0.7, 0.3])
+            else:
+                who_stage = np.random.choice([1, 2], p=[0.8, 0.2])
+            
+            # ART duration - some patients are new
+            if np.random.random() < late_presenters:
+                months_art = np.random.randint(1, 6)  # New patients
+            else:
+                months_art = np.random.randint(6, 60)  # Established patients
+            
+            # Missed visits based on retention
+            missed_visits = np.random.poisson(0.3 if np.random.random() < retention_rate else 2.5)
+            
+            patient = {
+                'Patient_ID': f'PAT{1000 + i}',
+                'Age': int(age),
+                'Gender': np.random.choice(['Male', 'Female'], p=[0.45, 0.55]),
+                'CD4_Count': int(cd4),
+                'Viral_Load': viral_load,
+                'WHO_Stage': who_stage,
+                'Months_on_ART': months_art,
+                'Last_Visit_Date': (datetime.now() - timedelta(days=np.random.randint(0, 90))).strftime('%Y-%m-%d'),
+                'ART_Regimen': np.random.choice(['TDF/3TC/DTG', 'TAF/FTC/DTG', 'AZT/3TC/EFV'], 
+                                              p=[0.6, 0.3, 0.1]),
+                'Clinic_Location': 'Urban' if clinic_type == 'urban' else 'Rural',
+                'Missed_Visits': missed_visits
+            }
+            data.append(patient)
+        
+        return pd.DataFrame(data)
+    
+    def analyze_clinic_data(self, df):
+        """Comprehensive analysis of clinic data"""
+        analysis = {}
+        
+        # Basic metrics
+        analysis['total_patients'] = len(df)
+        analysis['avg_age'] = df['Age'].mean()
+        analysis['gender_distribution'] = df['Gender'].value_counts(normalize=True)
+        
+        # Clinical metrics
+        analysis['ahd_cases'] = (df['CD4_Count'] < 200).mean() * 100
+        analysis['avg_cd4'] = df['CD4_Count'].mean()
+        
+        # Viral load analysis
+        analysis['viral_suppression'] = (df['Viral_Load'] < 1000).mean() * 100
+        analysis['undetectable'] = (df['Viral_Load'] < 50).mean() * 100
+        
+        # WHO stage distribution
+        analysis['who_stage_dist'] = df['WHO_Stage'].value_counts(normalize=True).sort_index()
+        
+        # ART adherence indicators
+        analysis['new_patients'] = (df['Months_on_ART'] < 6).mean() * 100
+        analysis['experienced_patients'] = (df['Months_on_ART'] >= 12).mean() * 100
+        analysis['avg_art_duration'] = df['Months_on_ART'].mean()
+        
+        # Retention indicators
+        analysis['good_retention'] = (df['Missed_Visits'] <= 1).mean() * 100
+        analysis['poor_retention'] = (df['Missed_Visits'] > 2).mean() * 100
+        
+        return analysis
+    
+    def generate_insights(self, analysis, df):
+        """Generate smart insights from analysis"""
+        insights = []
+        
+        # AHD insights
+        if analysis['ahd_cases'] > 20:
+            insights.append({
+                'type': '🚨 CRITICAL',
+                'title': 'High AHD Prevalence',
+                'message': f"{analysis['ahd_cases']:.1f}% of patients have Advanced HIV Disease",
+                'recommendation': 'Implement same-day ART initiation and enhance community testing'
+            })
+        elif analysis['ahd_cases'] > 10:
+            insights.append({
+                'type': '⚠️ WARNING', 
+                'title': 'Moderate AHD Cases',
+                'message': f"{analysis['ahd_cases']:.1f}% AHD prevalence needs monitoring",
+                'recommendation': 'Strengthen early detection and rapid linkage to care'
+            })
+        
+        # Viral suppression insights
+        suppression_gap = self.who_targets['viral_suppression'] - analysis['viral_suppression']
+        if suppression_gap > 20:
+            insights.append({
+                'type': '🚨 CRITICAL',
+                'title': 'Low Viral Suppression',
+                'message': f"Only {analysis['viral_suppression']:.1f}% suppression ({suppression_gap:.1f}% below target)",
+                'recommendation': 'Enhanced adherence counseling and regimen review'
+            })
+        elif suppression_gap > 10:
+            insights.append({
+                'type': '⚠️ WARNING',
+                'title': 'Suppression Below Target',
+                'message': f"{analysis['viral_suppression']:.1f}% suppression needs improvement",
+                'recommendation': 'Focus on patients with unsuppressed viral load'
+            })
+        
+        # Retention insights
+        if analysis['poor_retention'] > 20:
+            insights.append({
+                'type': '⚠️ WARNING',
+                'title': 'Patient Retention Issues',
+                'message': f"{analysis['poor_retention']:.1f}% of patients missing multiple visits",
+                'recommendation': 'Implement appointment reminders and community follow-up'
+            })
+        
+        # Age-based insights
+        young_patients = df[df['Age'] < 25]
+        if len(young_patients) > 0:
+            young_suppression = (young_patients['Viral_Load'] < 1000).mean() * 100
+            if young_suppression < 70:
+                insights.append({
+                    'type': '🎯 TARGETED',
+                    'title': 'Youth Engagement Challenge',
+                    'message': f"Young patients (18-25) have only {young_suppression:.1f}% suppression",
+                    'recommendation': 'Develop youth-friendly services and peer support programs'
+                })
+        
+        # CD4 recovery insights
+        if analysis['avg_cd4'] < 300:
+            insights.append({
+                'type': '📊 MONITOR',
+                'title': 'CD4 Recovery Needs Attention',
+                'message': f"Average CD4 count is {analysis['avg_cd4']:.0f} cells/mm³",
+                'recommendation': 'Review patients with slow immune recovery'
+            })
+        
+        return insights
+
+# Initialize analytics engine
+analytics_engine = ClinicAnalytics()
+
+# -------------------------------
 # TAB 2: Enhanced Analytics Dashboard
 # -------------------------------
 with tab2:
-    st.subheader("📈 Advanced Analytics & Insights")
+    st.subheader("🏥 Clinic Performance Analytics Dashboard")
     
-    # Create more realistic and clinically relevant data
-    st.markdown("### 🏥 Clinical Population Overview")
+    st.markdown("""
+    <div style='background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #4CAF50;'>
+    <h4 style='color: #2E86AB; margin-top: 0;'>📊 Understand Your Clinic's Performance</h4>
+    <p style='margin-bottom: 0;'>Upload your clinic data or use sample data to discover insights, identify challenges, 
+    and get actionable recommendations for improvement.</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Simulate more realistic patient data
-    np.random.seed(42)
-    n_patients = 500
+    # File upload section
+    st.markdown("### 📁 Upload Your Clinic Data")
     
-    realistic_data = pd.DataFrame({
-        "Age": np.random.normal(38, 12, n_patients).astype(int),
-        "CD4_Count": np.random.gamma(2, 100, n_patients).astype(int),
-        "Viral_Load": np.random.lognormal(5, 2, n_patients).astype(int),
-        "BMI": np.random.normal(23, 4, n_patients),
-        "Months_on_ART": np.random.exponential(24, n_patients).astype(int),
-        "WHO_Stage": np.random.choice([1, 2, 3, 4], n_patients, p=[0.4, 0.3, 0.2, 0.1]),
-        "Gender": np.random.choice(["Male", "Female"], n_patients, p=[0.45, 0.55])
-    })
-    
-    # Calculate AHD status based on realistic criteria
-    realistic_data["AHD_Risk"] = np.where(
-        (realistic_data["CD4_Count"] < 200) | (realistic_data["WHO_Stage"] >= 3), 
-        "High Risk", "Low Risk"
-    )
-    
-    # Create viral load categories
-    realistic_data["VL_Category"] = pd.cut(
-        realistic_data["Viral_Load"],
-        bins=[0, 50, 1000, 10000, float('inf')],
-        labels=["Undetectable", "Suppressed", "Unsuppressed", "High"]
-    )
-    
-    # Key metrics row
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        ahd_rate = (realistic_data["AHD_Risk"] == "High Risk").mean() * 100
-        st.metric("AHD Prevalence", f"{ahd_rate:.1f}%", 
-                 delta=f"{(ahd_rate - 18.5):+.1f}% vs avg" if ahd_rate != 18.5 else "Average")
-    
-    with col2:
-        suppression_rate = (realistic_data["VL_Category"].isin(["Undetectable", "Suppressed"])).mean() * 100
-        st.metric("Viral Suppression", f"{suppression_rate:.1f}%", 
-                 delta=f"{(suppression_rate - 75):+.1f}% vs target")
-    
-    with col3:
-        avg_cd4 = realistic_data["CD4_Count"].mean()
-        st.metric("Average CD4", f"{avg_cd4:.0f} cells/mm³", 
-                 delta="Below 350" if avg_cd4 < 350 else "Good")
-    
-    with col4:
-        late_presenters = ((realistic_data["CD4_Count"] < 200) & 
-                          (realistic_data["Months_on_ART"] < 3)).mean() * 100
-        st.metric("Late Presenters", f"{late_presenters:.1f}%", 
-                 delta="High" if late_presenters > 20 else "Optimal")
-
-    # First row of charts
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("🎯 **CD4 Distribution by AHD Risk**")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Create violin plot for better distribution visualization
-        risk_categories = realistic_data["AHD_Risk"].unique()
-        data_to_plot = [realistic_data[realistic_data["AHD_Risk"] == risk]["CD4_Count"] 
-                       for risk in risk_categories]
-        
-        parts = ax.violinplot(data_to_plot, showmeans=True, showmedians=True)
-        
-        # Customize colors
-        for pc, color in zip(parts['bodies'], ['lightgreen', 'lightcoral']):
-            pc.set_facecolor(color)
-            pc.set_alpha(0.7)
-        
-        ax.set_xticks([1, 2])
-        ax.set_xticklabels(risk_categories)
-        ax.set_ylabel("CD4 Count (cells/mm³)")
-        ax.axhline(200, color='red', linestyle='--', alpha=0.7, label='AHD Threshold')
-        ax.axhline(350, color='orange', linestyle='--', alpha=0.7, label='Treatment Threshold')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        st.pyplot(fig)
-        
-        # Clinical insights
-        with st.expander("📊 CD4 Insights"):
-            low_risk_median = realistic_data[realistic_data["AHD_Risk"] == "Low Risk"]["CD4_Count"].median()
-            high_risk_median = realistic_data[realistic_data["AHD_Risk"] == "High Risk"]["CD4_Count"].median()
-            st.write(f"""
-            - **Low Risk patients**: Median CD4 = {low_risk_median:.0f} cells/mm³
-            - **High Risk patients**: Median CD4 = {high_risk_median:.0f} cells/mm³
-            - **AHD threshold**: CD4 <200 cells/mm³
-            - **Treatment success**: CD4 >350 cells/mm³
-            """)
-
-    with col2:
-        st.write("📊 **Viral Load Suppression Patterns**")
-        
-        # Create stacked bar chart for VL categories by WHO stage
-        vl_by_stage = pd.crosstab(realistic_data["WHO_Stage"], 
-                                 realistic_data["VL_Category"], 
-                                 normalize='index') * 100
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        vl_by_stage.plot(kind='bar', stacked=True, ax=ax, 
-                        color=['lightgreen', 'lightblue', 'lightcoral', 'red'])
-        
-        ax.set_xlabel("WHO Clinical Stage")
-        ax.set_ylabel("Percentage (%)")
-        ax.set_title("Viral Load Distribution by Disease Stage")
-        ax.legend(title="VL Category", bbox_to_anchor=(1.05, 1), loc='upper left')
-        ax.grid(True, alpha=0.3)
-        
-        plt.xticks(rotation=0)
-        st.pyplot(fig)
-        
-        # Suppression insights
-        with st.expander("🔍 Suppression Analysis"):
-            stage_4_suppression = vl_by_stage.loc[4, ["Undetectable", "Suppressed"]].sum()
-            stage_1_suppression = vl_by_stage.loc[1, ["Undetectable", "Suppressed"]].sum()
-            st.write(f"""
-            - **Stage 1 patients**: {stage_1_suppression:.1f}% suppressed
-            - **Stage 4 patients**: {stage_4_suppression:.1f}% suppressed
-            - **WHO Target**: >90% viral suppression
-            - **Gap analysis**: {max(0, 90 - stage_4_suppression):.1f}% improvement needed in advanced disease
-            """)
-
-    # Second row - Advanced analytics
-    st.markdown("### 📈 Advanced Clinical Analytics")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("🕒 **Time on ART vs Viral Response**")
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Create bins for months on ART
-        realistic_data["ART_Duration_Group"] = pd.cut(
-            realistic_data["Months_on_ART"],
-            bins=[0, 6, 12, 24, 60, float('inf')],
-            labels=["0-6m", "6-12m", "1-2y", "2-5y", "5y+"]
+        uploaded_file = st.file_uploader(
+            "Upload CSV file with patient data", 
+            type=['csv'],
+            help="File should contain: Patient_ID, Age, Gender, CD4_Count, Viral_Load, WHO_Stage, Months_on_ART, etc."
         )
-        
-        # Calculate suppression rates by duration
-        duration_suppression = realistic_data.groupby("ART_Duration_Group").apply(
-            lambda x: (x["VL_Category"].isin(["Undetectable", "Suppressed"])).mean() * 100
-        )
-        
-        # Plot with trend line
-        x_positions = range(len(duration_suppression))
-        bars = ax.bar(x_positions, duration_suppression.values, 
-                     color='skyblue', alpha=0.7)
-        
-        # Add trend line
-        z = np.polyfit(x_positions, duration_suppression.values, 1)
-        p = np.poly1d(z)
-        ax.plot(x_positions, p(x_positions), "r--", alpha=0.8, linewidth=2, label='Trend')
-        
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels(duration_suppression.index)
-        ax.set_ylabel("Suppression Rate (%)")
-        ax.set_ylim(0, 100)
-        ax.axhline(90, color='green', linestyle='-', alpha=0.5, label='WHO Target')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        # Add value labels on bars
-        for bar, value in zip(bars, duration_suppression.values):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 1,
-                   f'{value:.0f}%', ha='center', va='bottom', fontweight='bold')
-        
-        st.pyplot(fig)
-
-    with col2:
-        st.write("👥 **Age Distribution by Risk Category**")
-        
-        # Create age distribution by risk
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        # Plot age distributions for each risk category
-        low_risk_ages = realistic_data[realistic_data["AHD_Risk"] == "Low Risk"]["Age"]
-        high_risk_ages = realistic_data[realistic_data["AHD_Risk"] == "High Risk"]["Age"]
-        
-        # Use histograms with density
-        ax.hist([low_risk_ages, high_risk_ages], 
-                bins=15, alpha=0.7, 
-                label=['Low Risk', 'High Risk'],
-                color=['lightgreen', 'lightcoral'],
-                density=True)
-        
-        ax.set_xlabel("Age (years)")
-        ax.set_ylabel("Density")
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-        
-        st.pyplot(fig)
-        
-        # Age insights
-        with st.expander("📋 Age Analysis"):
-            avg_age_low = low_risk_ages.mean()
-            avg_age_high = high_risk_ages.mean()
-            st.write(f"""
-            - **Low Risk average age**: {avg_age_low:.1f} years
-            - **High Risk average age**: {avg_age_high:.1f} years
-            - **Age difference**: {abs(avg_age_high - avg_age_low):.1f} years
-            - **Clinical implication**: Older patients may present later with advanced disease
-            """)
-
-    # Third row - Performance metrics
-    st.markdown("### 🎯 Program Performance Indicators")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        # Retention analysis
-        retention_rates = {
-            "6 months": 88.5,
-            "12 months": 82.3,
-            "24 months": 76.8
-        }
-        
-        st.write("**Retention in Care**")
-        for period, rate in retention_rates.items():
-            progress = rate / 100
-            st.write(f"{period}: {rate}%")
-            st.progress(progress)
     
     with col2:
-        # Time to suppression
-        time_metrics = {
-            "0-3 months": 45.2,
-            "3-6 months": 78.6,
-            "6-12 months": 89.3
-        }
-        
-        st.write("**Time to Viral Suppression**")
-        for period, rate in time_metrics.items():
-            st.write(f"{period}: {rate}%")
-    
-    with col3:
-        # OI prevention coverage
-        prevention_metrics = {
-            "Cotrimoxazole": 92.1,
-            "TB Prevention": 78.4,
-            "Fluconazole": 65.3
-        }
-        
-        st.write("**OI Prevention Coverage**")
-        for intervention, coverage in prevention_metrics.items():
-            st.write(f"{intervention}: {coverage}%")
-
-    # Recommendations section
-    st.markdown("### 💡 Clinical Recommendations & Insights")
-    
-    recommendations = [
-        {
-            "issue": "High late presenter rate",
-            "recommendation": "Implement community testing and same-day ART initiation",
-            "impact": "Could reduce AHD prevalence by 15-20%"
-        },
-        {
-            "issue": "Lower suppression in advanced disease",
-            "recommendation": "Enhanced adherence support for WHO Stage 3/4 patients",
-            "impact": "Potential 25% improvement in viral suppression"
-        },
-        {
-            "issue": "Age disparity in AHD cases",
-            "recommendation": "Targeted testing campaigns for older populations",
-            "impact": "Early detection in high-risk age groups"
-        }
-    ]
-    
-    for i, rec in enumerate(recommendations, 1):
-        with st.expander(f"Recommendation {i}: {rec['issue']}"):
-            st.write(f"**Action**: {rec['recommendation']}")
-            st.write(f"**Expected Impact**: {rec['impact']}")
-            st.button(f"Implement Strategy {i}", key=f"btn_{i}")
-
-    # Data download option
-    st.markdown("---")
-    st.markdown("### 📥 Export Analytics")
-    
-    if st.button("📊 Generate Analytics Report"):
-        # Create a summary report
-        report_data = {
-            "Total Patients": n_patients,
-            "AHD Prevalence": f"{ahd_rate:.1f}%",
-            "Overall Suppression Rate": f"{suppression_rate:.1f}%",
-            "Average CD4": f"{avg_cd4:.0f} cells/mm³",
-            "Late Presenters": f"{late_presenters:.1f}%",
-            "Report Generated": datetime.now().strftime("%Y-%m-%d %H:%M")
-        }
-        
-        report_df = pd.DataFrame(list(report_data.items()), 
-                               columns=['Metric', 'Value'])
-        
-        st.download_button(
-            label="📥 Download Analytics Report",
-            data=report_df.to_csv(index=False),
-            file_name=f"ahd_analytics_report_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
+        st.markdown("### 🚀 Quick Demo")
+        demo_option = st.selectbox(
+            "Try sample data:",
+            ["Select sample...", "Urban Excellence Clinic", "Rural Challenge Clinic"]
         )
+    
+    # Data management
+    current_data = None
+    data_source = None
+    
+    if uploaded_file is not None:
+        # Use uploaded file
+        current_data = pd.read_csv(uploaded_file)
+        data_source = "Uploaded File"
+        st.success(f"✅ Successfully loaded {len(current_data)} patient records")
+        
+    elif demo_option != "Select sample...":
+        # Generate sample data
+        clinic_type = "urban" if "Urban" in demo_option else "rural"
+        current_data = analytics_engine.generate_sample_data(clinic_type)
+        data_source = demo_option
+        st.success(f"✅ Generated {len(current_data)} sample patient records from {demo_option}")
+    
+    # Main dashboard content
+    if current_data is not None:
+        st.markdown("---")
+        
+        # Perform analysis
+        with st.spinner("🔍 Analyzing clinic data..."):
+            analysis = analytics_engine.analyze_clinic_data(current_data)
+            insights = analytics_engine.generate_insights(analysis, current_data)
+        
+        # Key Metrics Dashboard
+        st.markdown("### 📈 Key Performance Indicators")
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            delta_suppression = analysis['viral_suppression'] - analytics_engine.who_targets['viral_suppression']
+            st.metric(
+                "Viral Suppression", 
+                f"{analysis['viral_suppression']:.1f}%",
+                f"{delta_suppression:+.1f}%",
+                delta_color="inverse" if delta_suppression < 0 else "normal"
+            )
+            st.caption(f"WHO Target: {analytics_engine.who_targets['viral_suppression']}%")
+        
+        with col2:
+            st.metric(
+                "AHD Prevalence", 
+                f"{analysis['ahd_cases']:.1f}%",
+                "Lower is better",
+                delta_color="inverse"
+            )
+            st.caption("CD4 <200 cells/mm³")
+        
+        with col3:
+            st.metric(
+                "Avg CD4 Count", 
+                f"{analysis['avg_cd4']:.0f}",
+                "cells/mm³"
+            )
+            st.caption("Immune recovery")
+        
+        with col4:
+            st.metric(
+                "Patient Retention", 
+                f"{analysis['good_retention']:.1f}%",
+                "Regular attendees"
+            )
+            st.caption("Missed ≤1 visit")
+        
+        # Insights and Recommendations
+        st.markdown("### 💡 Smart Insights & Recommendations")
+        
+        if insights:
+            for insight in insights:
+                with st.container():
+                    st.markdown(f"""
+                    <div style='padding: 15px; border-radius: 10px; border-left: 5px solid {
+                        '#FF4B4B' if 'CRITICAL' in insight['type'] else 
+                        '#FFA500' if 'WARNING' in insight['type'] else
+                        '#4CAF50' if 'TARGETED' in insight['type'] else '#2196F3'
+                    }; background-color: #f8f9fa; margin: 10px 0;'>
+                    <h4 style='margin: 0 0 10px 0;'>{insight['type']}: {insight['title']}</h4>
+                    <p style='margin: 0 0 10px 0;'><strong>{insight['message']}</strong></p>
+                    <p style='margin: 0;'><em>💡 Recommendation: {insight['recommendation']}</em></p>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.success("🎉 Excellent! Your clinic is meeting or exceeding most performance targets!")
+        
+        # Detailed Analysis Section
+        st.markdown("### 📊 Detailed Analysis")
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["Clinical Health", "Patient Demographics", "Treatment Patterns", "Data Explorer"])
+        
+        with tab1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**CD4 Count Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create CD4 categories
+                cd4_bins = [0, 200, 350, 500, float('inf')]
+                cd4_labels = ['Critical (<200)', 'Advanced (200-350)', 'Good (350-500)', 'Excellent (>500)']
+                current_data['CD4_Category'] = pd.cut(current_data['CD4_Count'], bins=cd4_bins, labels=cd4_labels)
+                
+                cd4_counts = current_data['CD4_Category'].value_counts().reindex(cd4_labels)
+                colors = ['red', 'orange', 'lightgreen', 'darkgreen']
+                
+                bars = ax.bar(cd4_labels, cd4_counts.values, color=colors, alpha=0.7)
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('CD4 Health Distribution')
+                plt.xticks(rotation=45)
+                
+                # Add value labels
+                for bar, count in zip(bars, cd4_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold')
+                
+                st.pyplot(fig)
+            
+            with col2:
+                st.write("**Viral Load Status**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create VL categories
+                vl_bins = [0, 50, 1000, 10000, float('inf')]
+                vl_labels = ['Undetectable (<50)', 'Suppressed (50-1000)', 'Unsuppressed (1000-10000)', 'High (>10000)']
+                current_data['VL_Category'] = pd.cut(current_data['Viral_Load'], bins=vl_bins, labels=vl_labels)
+                
+                vl_counts = current_data['VL_Category'].value_counts().reindex(vl_labels)
+                colors = ['darkgreen', 'lightgreen', 'orange', 'red']
+                
+                bars = ax.bar(vl_labels, vl_counts.values, color=colors, alpha=0.7)
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Viral Load Control')
+                plt.xticks(rotation=45)
+                
+                # Add value labels
+                for bar, count in zip(bars, vl_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold')
+                
+                st.pyplot(fig)
+        
+        with tab2:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Age Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Age'], bins=15, alpha=0.7, color='skyblue', edgecolor='black')
+                ax.set_xlabel('Age')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Patient Age Distribution')
+                ax.axvline(current_data['Age'].mean(), color='red', linestyle='--', label=f"Mean: {current_data['Age'].mean():.1f}")
+                ax.legend()
+                st.pyplot(fig)
+            
+            with col2:
+                st.write("**Gender Distribution**")
+                gender_counts = current_data['Gender'].value_counts()
+                fig, ax = plt.subplots(figsize=(8, 6))
+                ax.pie(gender_counts.values, labels=gender_counts.index, autopct='%1.1f%%', 
+                      colors=['lightblue', 'lightpink'], startangle=90)
+                ax.set_title('Patient Gender Distribution')
+                st.pyplot(fig)
+        
+        with tab3:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**ART Regimen Distribution**")
+                regimen_counts = current_data['ART_Regimen'].value_counts()
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.pie(regimen_counts.values, labels=regimen_counts.index, autopct='%1.1f%%', startangle=90)
+                ax.set_title('ART Regimen Usage')
+                st.pyplot(fig)
+            
+            with col2:
+                st.write("**Treatment Duration**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Months_on_ART'], bins=20, alpha=0.7, color='lightgreen', edgecolor='black')
+                ax.set_xlabel('Months on ART')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Treatment Duration Distribution')
+                ax.axvline(current_data['Months_on_ART'].mean(), color='red', linestyle='--', 
+                          label=f"Mean: {current_data['Months_on_ART'].mean():.1f} months")
+                ax.legend()
+                st.pyplot(fig)
+        
+        with tab4:
+            st.write("**Patient Data Explorer**")
+            st.dataframe(current_data, use_container_width=True)
+            
+            # Data summary
+            st.write("**Data Summary:**")
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.metric("Total Patients", len(current_data))
+            with col2:
+                st.metric("Data Columns", len(current_data.columns))
+            with col3:
+                st.metric("Complete Records", f"{100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100):.1f}%")
+        
+        # Export Section
+        st.markdown("---")
+        st.markdown("### 📥 Export Analysis Report")
+        
+        # Generate report
+        report_text = f"""
+        CLINIC PERFORMANCE REPORT
+        Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
+        Data Source: {data_source}
+        Total Patients: {len(current_data)}
+        
+        KEY METRICS:
+        - Viral Suppression: {analysis['viral_suppression']:.1f}%
+        - AHD Prevalence: {analysis['ahd_cases']:.1f}%
+        - Average CD4: {analysis['avg_cd4']:.0f} cells/mm³
+        - Patient Retention: {analysis['good_retention']:.1f}%
+        
+        RECOMMENDATIONS:
+        """
+        
+        for i, insight in enumerate(insights, 1):
+            report_text += f"\n{i}. {insight['recommendation']}"
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.download_button(
+                label="📄 Download Text Report",
+                data=report_text,
+                file_name=f"clinic_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+                mime="text/plain"
+            )
+        
+        with col2:
+            # Convert DataFrame to CSV for download
+            csv = current_data.to_csv(index=False)
+            st.download_button(
+                label="📊 Download Data as CSV",
+                data=csv,
+                file_name=f"clinic_data_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                mime="text/csv"
+            )
+    
+    else:
+        # No data loaded - show instructions
+        st.markdown("---")
+        st.markdown("""
+        ### 🚀 How to Use This Dashboard
+        
+        1. **Upload Your Data**: Click 'Browse files' to upload your clinic's CSV data
+        2. **Try Sample Data**: Select a sample clinic to see how the analysis works
+        3. **Get Insights**: The dashboard will automatically analyze and provide recommendations
+        
+        ### 📋 Expected Data Format
+        Your CSV file should include these columns (or similar):
+        ```
+        Patient_ID, Age, Gender, CD4_Count, Viral_Load, WHO_Stage, 
+        Months_on_ART, Last_Visit_Date, ART_Regimen, Clinic_Location, Missed_Visits
+        ```
+        
+        ### 🎯 What You'll Discover
+        - Performance against WHO targets
+        - Patient groups needing special attention
+        - Specific recommendations for improvement
+        - Detailed clinical patterns and trends
+        """)
+        
+        # Show sample data structure
+        with st.expander("📊 View Sample Data Structure"):
+            sample_df = analytics_engine.generate_sample_data("urban").head(10)
+            st.dataframe(sample_df)
+
+# Add this to your existing app structure
+st.markdown("---")
+st.markdown("<div style='text-align: center; color: gray;'>© 2025 | Built with ❤️ for Better HIV Care</div>", unsafe_allow_html=True)
 
 # -------------------------------
 # TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT
