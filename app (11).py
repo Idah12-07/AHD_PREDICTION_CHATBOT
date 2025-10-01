@@ -163,16 +163,16 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    # Safe, one-time working chatbot
+                    # Use 'prompt' instead of 'inputs'
                     response = client.text_generation(
                         model="mistralai/Mistral-7B-Instruct-v0.2",
-                        inputs=user_input,
-                        task="conversational",
+                        prompt=user_input,        # <-- key change
+                        task="conversational",    # ensures conversational behavior
                         max_new_tokens=200,
                         temperature=0.7
                     )
 
-                    # Extract the reply
+                    # Extract generated text
                     if isinstance(response, list) and "generated_text" in response[0]:
                         reply_text = response[0]["generated_text"]
                     else:
@@ -185,6 +185,7 @@ with tab3:
                     st.markdown("If this issue persists, contact the dashboard administrator.")
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
+
 
 # Footer
 # -------------------------------
