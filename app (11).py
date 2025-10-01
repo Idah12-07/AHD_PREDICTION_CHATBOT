@@ -1189,8 +1189,7 @@ For clinical decision support only
         """)
 
 # -------------------------------
-# -------------------------------
-# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - FIXED DISPLAY
+# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - FIXED
 # -------------------------------
 with tab3:
     st.subheader("💬 HIV/AIDS Expert Chatbot")
@@ -1245,7 +1244,7 @@ with tab3:
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_statistics("global")})
             st.rerun()
 
-    # Chat input - MOVED TO BOTTOM BUT STILL FUNCTIONAL
+    # Chat input
     st.markdown("---")
     if prompt := st.chat_input("Type your HIV-related question here..."):
         # Add user message to chat history
