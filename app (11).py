@@ -660,7 +660,7 @@ I specialize in **comprehensive HIV/AIDS knowledge** including:
 • "What statistics are available for Kenya?"
 • "Explain WHO staging system"
 • "What is the difference between HIV and AIDS?"
-• "How effective is PrEP for prevention?""""
+• "How effective is PrEP for prevention?" """
 
 # Initialize chatbot
 chatbot = HIVExpertChatbot()
