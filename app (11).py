@@ -1189,24 +1189,25 @@ For clinical decision support only
         """)
 
 # -------------------------------
-# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - IMPROVED LAYOUT
+# -------------------------------
+# TAB 3: COMPREHENSIVE HIV EXPERT CHATBOT - FIXED DISPLAY
 # -------------------------------
 with tab3:
     st.subheader("💬 HIV/AIDS Expert Chatbot")
     st.info("🔬 **Ask me anything about HIV/AIDS** - Treatment, Prevention, Guidelines, Statistics, Clinical Management")
     
-    # Initialize chat history - SIMPLIFIED GREETING
+    # Initialize chat history
     if "messages" not in st.session_state:
         st.session_state.messages = [
             {"role": "assistant", "content": "Hello! I'm your HIV/AIDS expert assistant. Ask me anything about HIV treatment, prevention, guidelines, or statistics."}
         ]
     
-    # Display chat messages FIRST (conversation at the top)
+    # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
     
-    # Quick action buttons BELOW the conversation
+    # Quick action buttons
     st.markdown("### 💡 Quick Questions")
     
     col1, col2, col3 = st.columns(3)
@@ -1243,14 +1244,12 @@ with tab3:
             st.session_state.messages.append({"role": "user", "content": "global HIV statistics"})
             st.session_state.messages.append({"role": "assistant", "content": chatbot.get_statistics("global")})
             st.rerun()
-    
-    # Chat input AT THE BOTTOM (natural conversation flow)
+
+    # Chat input - MOVED TO BOTTOM BUT STILL FUNCTIONAL
     st.markdown("---")
     if prompt := st.chat_input("Type your HIV-related question here..."):
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
         
         # Generate assistant response
         with st.chat_message("assistant"):
@@ -1264,7 +1263,7 @@ with tab3:
             # Add assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": response})
     
-    # Clear chat button at the very bottom
+    # Clear chat button
     st.markdown("---")
     if st.button("🗑️ Clear Conversation", use_container_width=True, type="primary"):
         st.session_state.messages = [
