@@ -176,11 +176,9 @@ with tab3:
                 try:
                     # Call the model correctly for latest Hugging Face API
                     response = client.text_generation(
-                        model="mistralai/Mistral-7B-Instruct-v0.2",
                         prompt=user_input,        # Required
                         max_new_tokens=200,
-                        temperature=0.7,
-                        task="conversational"     # Supported in latest versions
+                        temperature=0.7    # Supported in latest versions
                     )
 
                     # Extract generated text safely
