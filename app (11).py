@@ -34,16 +34,18 @@ except Exception as e:
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(api_key=HF_TOKEN, model="gtp2")
+    client = InferenceClient(
+        api_key=HF_TOKEN,
+        model="mistralai/Mistral-7B-Instruct-v0.2"
+    )
 except Exception as e:
     client = None
-    st.warning("⚠️ Hugging Face token not found. Chatbot tab may not work.")
+    st.warning(f"⚠️ Hugging Face token/model not found: {e}")
 
 # -------------------------------
 # Tabs
 # -------------------------------
 tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "📈 Analytics", "💬 Guideline Chatbot"])
-
 
 # -------------------------------
 # TAB 1: Dashboard (Prediction)
@@ -126,7 +128,6 @@ with tab1:
             with st.expander("Input Features Used"):
                 st.write(X_input.T)
 
-
 # -------------------------------
 # TAB 2: Analytics (Sample)
 # -------------------------------
@@ -154,63 +155,34 @@ with tab2:
         sns.scatterplot(data=data, x="CD4 Count", y="Viral Load", hue="Risk", ax=ax)
         st.pyplot(fig)
 
-
 # -------------------------------
-# -------------------------------
-# TAB 3: Chatbot (Smart Fallback)
+# TAB 3: Chatbot (Streaming)
 # -------------------------------
 with tab3:
-    st.subheader("💬 Guideline Chatbot")
+    st.subheader("💬 Guideline Chatbot (Streaming)")
 
-    # Fallback responses dictionary
-    fallback_responses = {
-        "what is ahd": "Advanced HIV Disease (AHD) is defined by a CD4 count below 200 cells/mm³ or WHO stage 3 or 4 conditions.",
-        "cd4 threshold": "The CD4 threshold for AHD is typically <200 cells/mm³.",
-        "art eligibility": "All individuals with AHD should initiate ART promptly, regardless of CD4 count.",
-        "who stage 3": "WHO Stage 3 includes conditions like severe weight loss, chronic diarrhea, and persistent fever.",
-        "who stage 4": "WHO Stage 4 includes severe opportunistic infections such as cryptococcal meningitis and extrapulmonary TB.",
-        "tb screening": "TB screening is essential for all PLHIV. Use symptom-based screening and consider Xpert MTB/RIF testing.",
-        "cryptococcal screening": "Screen all patients with CD4 <100 for cryptococcal antigen before ART initiation.",
-        "fluconazole use": "Fluconazole is used for pre-emptive treatment of cryptococcal antigen-positive patients.",
-        "cotrimoxazole prophylaxis": "Cotrimoxazole is recommended for all AHD patients to prevent opportunistic infections.",
-        "adherence support": "Enhanced adherence counseling is critical for patients with AHD starting or restarting ART."
-    }
+    if client:
+        user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
+        if st.button("Send") and user_input:
+            with st.spinner("Thinking..."):
+                try:
+                    chat_placeholder = st.empty()
+                    output_text = ""
 
-    st.markdown("💡 Try asking about: `CD4 threshold`, `ART eligibility`, `WHO stage 3`, `TB screening`, `fluconazole use`")
+                    for chunk in client.text_generation_stream(
+                        prompt=user_input,
+                        max_new_tokens=200,
+                        temperature=0.7
+                    ):
+                        output_text += chunk.get('generated_text', '')
+                        chat_placeholder.markdown(f"**Assistant:** {output_text}")
 
-    user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
-    if st.button("Send") and user_input:
-        user_input_lower = user_input.lower().strip()
+                except Exception as e:
+                    st.error(f"❌ Chatbot failed to respond: {e}")
+                    st.markdown("If this issue persists, contact the dashboard administrator.")
+    else:
+        st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
 
-        response = None
-        source = "demo"
-
-        # Try Hugging Face model first
-        if client:
-            try:
-                prompt = f"Answer the following question clearly:\n{user_input}"
-                response = client.text2text_generation(
-                    prompt=prompt,
-                    max_new_tokens=200
-                )
-                source = "model"
-            except Exception:
-                response = None
-
-        # Fallback if model fails or client is None
-        if not response:
-            response = fallback_responses.get(
-                user_input_lower,
-                "❓ Sorry, I couldn't find a guideline for that. Try asking about CD4 thresholds, ART eligibility, or WHO staging."
-            )
-
-        st.markdown(f"**Assistant ({'LLM' if source == 'model' else 'Demo'}):** {response}")
-
-        
 # Footer
-# -------------------------------
 st.markdown("---")
 st.markdown("<div style='text-align:center; color:gray;'>© 2025 | Built with ❤️ by <b>Idah Anyango</b></div>", unsafe_allow_html=True)
-
-
-
