@@ -156,31 +156,57 @@ with tab2:
 
 
 # -------------------------------
-# TAB 3: Chatbot (Hugging Face LLM)
+# -------------------------------
+# TAB 3: Chatbot (Smart Fallback)
 # -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
 
-    if client:
-        user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
-        if st.button("Send") and user_input:
-            with st.spinner("Thinking..."):
-                try:
-                    response = client.text_generation(  
-                        prompt=user_input,
-                        max_new_tokens=200,
-                        temperature=0.7
-                    )
-                    st.markdown(f"**Assistant:** {response}")
-                except Exception as e:
-                    st.error("❌ Chatbot failed to respond. Please check your question or try again later.")
-                    st.markdown("If this issue persists, contact the dashboard administrator.")
-    else:
-        st.error("❌ Chatbot is not available. Check Hugging Face token.")
+    # Fallback responses dictionary
+    fallback_responses = {
+        "what is ahd": "Advanced HIV Disease (AHD) is defined by a CD4 count below 200 cells/mm³ or WHO stage 3 or 4 conditions.",
+        "cd4 threshold": "The CD4 threshold for AHD is typically <200 cells/mm³.",
+        "art eligibility": "All individuals with AHD should initiate ART promptly, regardless of CD4 count.",
+        "who stage 3": "WHO Stage 3 includes conditions like severe weight loss, chronic diarrhea, and persistent fever.",
+        "who stage 4": "WHO Stage 4 includes severe opportunistic infections such as cryptococcal meningitis and extrapulmonary TB.",
+        "tb screening": "TB screening is essential for all PLHIV. Use symptom-based screening and consider Xpert MTB/RIF testing.",
+        "cryptococcal screening": "Screen all patients with CD4 <100 for cryptococcal antigen before ART initiation.",
+        "fluconazole use": "Fluconazole is used for pre-emptive treatment of cryptococcal antigen-positive patients.",
+        "cotrimoxazole prophylaxis": "Cotrimoxazole is recommended for all AHD patients to prevent opportunistic infections.",
+        "adherence support": "Enhanced adherence counseling is critical for patients with AHD starting or restarting ART."
+    }
+
+    st.markdown("💡 Try asking about: `CD4 threshold`, `ART eligibility`, `WHO stage 3`, `TB screening`, `fluconazole use`")
+
+    user_input = st.text_input("Ask a question about HIV/AHD guidelines:")
+    if st.button("Send") and user_input:
+        user_input_lower = user_input.lower().strip()
+
+        response = None
+        source = "demo"
+
+        # Try Hugging Face model first
+        if client:
+            try:
+                prompt = f"Answer the following question clearly:\n{user_input}"
+                response = client.text2text_generation(
+                    prompt=prompt,
+                    max_new_tokens=200
+                )
+                source = "model"
+            except Exception:
+                response = None
+
+        # Fallback if model fails or client is None
+        if not response:
+            response = fallback_responses.get(
+                user_input_lower,
+                "❓ Sorry, I couldn't find a guideline for that. Try asking about CD4 thresholds, ART eligibility, or WHO staging."
+            )
+
+        st.markdown(f"**Assistant ({'LLM' if source == 'model' else 'Demo'}):** {response}")
 
         
-
-
 # Footer
 # -------------------------------
 st.markdown("---")
