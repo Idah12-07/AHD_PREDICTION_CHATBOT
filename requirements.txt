@@ -8,5 +8,7 @@ seaborn
 requests
 PyPDF2
 scikit-learn
-huggingface_hub>=0.13.0
+huggingface_hub>=1.26.1
+pip install --upgrade huggingface_hub
+
 
