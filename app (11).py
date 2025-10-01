@@ -34,7 +34,7 @@ except Exception as e:
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(api_key=HF_TOKEN, model="google/flan-t5-large")
+    client = InferenceClient(api_key=HF_TOKEN, model="gtp2")
 except Exception as e:
     client = None
     st.warning("⚠️ Hugging Face token not found. Chatbot tab may not work.")
@@ -166,9 +166,10 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    response = client.text2text_generation(  
+                    response = client.text_generation(  
                         prompt=user_input,
-                        max_new_tokens=200
+                        max_new_tokens=200,
+                        temperature=0.7
                     )
                     st.markdown(f"**Assistant:** {response}")
                 except Exception as e:
