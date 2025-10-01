@@ -34,13 +34,10 @@ except Exception as e:
 # -------------------------------
 try:
     HF_TOKEN = st.secrets["huggingface"]["token"]
-    client = InferenceClient(
-        api_key=HF_TOKEN,
-        model="mistralai/Mistral-7B-Instruct-v0.2"
-    )
+    client = InferenceClient(api_key=HF_TOKEN)
 except Exception as e:
     client = None
-    st.warning(f"⚠️ Hugging Face token/model not found: {e}")
+    st.warning("⚠️ Hugging Face token not found. Chatbot tab may not work.")
 
 # -------------------------------
 # Tabs
@@ -156,7 +153,6 @@ with tab2:
         st.pyplot(fig)
 
 # -------------------------------
-# -------------------------------
 # TAB 3: Chatbot (Hugging Face LLM)
 # -------------------------------
 with tab3:
@@ -167,15 +163,21 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    # Call the client as a function for conversational model
-                    response = client({
-                        "inputs": [
-                            {"role": "user", "content": user_input}
-                        ]
-                    })
+                    # Safe, one-time working chatbot
+                    response = client.text_generation(
+                        model="mistralai/Mistral-7B-Instruct-v0.2",
+                        inputs=user_input,
+                        task="conversational",
+                        max_new_tokens=200,
+                        temperature=0.7
+                    )
 
-                    # Extract the assistant reply
-                    reply_text = response.get('generated_text', str(response))
+                    # Extract the reply
+                    if isinstance(response, list) and "generated_text" in response[0]:
+                        reply_text = response[0]["generated_text"]
+                    else:
+                        reply_text = str(response)
+
                     st.markdown(f"**Assistant:** {reply_text}")
 
                 except Exception as e:
@@ -184,9 +186,7 @@ with tab3:
     else:
         st.error("❌ Chatbot is not available. Check Hugging Face token/model.")
 
-
-
-
 # Footer
+# -------------------------------
 st.markdown("---")
 st.markdown("<div style='text-align:center; color:gray;'>© 2025 | Built with ❤️ by <b>Idah Anyango</b></div>", unsafe_allow_html=True)
