@@ -156,6 +156,9 @@ with tab2:
         st.pyplot(fig)
 
 # -------------------------------
+# -------------------------------
+# TAB 3: Chatbot (Hugging Face LLM)
+# -------------------------------
 with tab3:
     st.subheader("💬 Guideline Chatbot")
 
@@ -164,14 +167,15 @@ with tab3:
         if st.button("Send") and user_input:
             with st.spinner("Thinking..."):
                 try:
-                    # For conversational models, use client.chat.create()
-                    response = client.chat.create(
-                        model="mistralai/Mistral-7B-Instruct-v0.2",
-                        messages=[{"role": "user", "content": user_input}]
-                    )
+                    # Call the client as a function for conversational model
+                    response = client({
+                        "inputs": [
+                            {"role": "user", "content": user_input}
+                        ]
+                    })
 
-                    # Extract the assistant's reply
-                    reply_text = response.choices[0].message.content
+                    # Extract the assistant reply
+                    reply_text = response.get('generated_text', str(response))
                     st.markdown(f"**Assistant:** {reply_text}")
 
                 except Exception as e:
