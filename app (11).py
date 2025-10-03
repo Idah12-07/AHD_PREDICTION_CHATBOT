@@ -1,3 +1,5 @@
+hey i already debugged everything, i want to paste the now functioning  app codes, and especially in the chatbot tell me if there are some improvements that you can make, i also realised that in the analytic tab you can also check it, we are i  the final lap now to polish it and add more possible chat information on the chat bot concerning hiv/ncds,  and all concepts in it, please lets polish it one final round for the best, give it your all but ensure you dont mess up anything, ensure no identation errors, the ribbon should be red its yellow
+
 import streamlit as st
 import pandas as pd
 import numpy as np
