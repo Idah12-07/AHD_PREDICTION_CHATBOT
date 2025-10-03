@@ -14,17 +14,13 @@ warnings.filterwarnings('ignore')
 # -------------------------------
 st.set_page_config(page_title="AHD Copilot", layout="wide", page_icon="🎗️")
 
-# Custom CSS for red ribbon only
+# Simple red ribbon styling only
 st.markdown("""
 <style>
     .red-ribbon {
-        background-color: #d32f2f;
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
+        color: #d32f2f;
         text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -36,20 +32,16 @@ exploring analytics, and interacting with **comprehensive HIV/AIDS expert chatbo
 """)
 
 # -------------------------------
-# Load Model - FIXED VERSION
+# Load Model
 # -------------------------------
 try:
     deploy = joblib.load("ahd_model_C_hybrid_fixed.pkl")
     model = deploy['model']
     feature_names = deploy['feature_names']
     model_loaded = True
-    st.sidebar.success("✅ Model loaded successfully")
 except Exception as e:
     st.error(f"⚠️ Could not load model: {e}")
-    st.info("🔧 Using demo mode for predictions")
     model_loaded = False
-    model = None
-    feature_names = []
 
 # -------------------------------
 # ENHANCED COMPREHENSIVE HIV/AIDS EXPERT CHATBOT CLASS
@@ -730,7 +722,7 @@ I specialize in comprehensive HIV topics including:
 Could you please rephrase your question or ask about one of these specific HIV/AIDS topics? I'm here to provide you with the most current, evidence-based information."""
 
 # -------------------------------
-# ENHANCED ANALYTICS DASHBOARD CLASS WITH COMPREHENSIVE RECOMMENDATIONS
+# ENHANCED ANALYTICS DASHBOARD CLASS
 # -------------------------------
 class ClinicAnalytics:
     def __init__(self):
@@ -740,126 +732,6 @@ class ClinicAnalytics:
             'patient_retention': 90,
             'ahd_prevention': 85
         }
-    
-    def validate_and_clean_data(self, df):
-        """Comprehensive data validation and cleaning"""
-        validation_report = {
-            'original_shape': df.shape,
-            'missing_values': {},
-            'outliers': {},
-            'data_quality_issues': [],
-            'cleaning_applied': [],
-            'final_shape': None
-        }
-        
-        # Create a copy to avoid modifying original
-        cleaned_df = df.copy()
-        
-        # Check for required columns
-        required_columns = ['Patient_ID', 'Age', 'Gender', 'CD4_Count', 'Viral_Load', 'WHO_Stage']
-        missing_required = [col for col in required_columns if col not in cleaned_df.columns]
-        
-        if missing_required:
-            validation_report['data_quality_issues'].append(
-                f"CRITICAL: Missing required columns: {missing_required}"
-            )
-            # If critical columns missing, return original with warning
-            if 'CD4_Count' in missing_required or 'Viral_Load' in missing_required:
-                return cleaned_df, validation_report
-        
-        # Handle missing values
-        for column in cleaned_df.columns:
-            missing_count = cleaned_df[column].isnull().sum()
-            missing_pct = (missing_count / len(cleaned_df)) * 100
-            
-            validation_report['missing_values'][column] = {
-                'count': missing_count,
-                'percentage': missing_pct
-            }
-            
-            if missing_pct > 0:
-                if missing_pct > 30:
-                    validation_report['data_quality_issues'].append(
-                        f"HIGH missing values in {column}: {missing_pct:.1f}%"
-                    )
-                elif missing_pct > 10:
-                    validation_report['data_quality_issues'].append(
-                        f"MODERATE missing values in {column}: {missing_pct:.1f}%"
-                    )
-                
-                # Imputation strategy based on column type
-                if column in ['CD4_Count', 'Viral_Load', 'Age', 'Months_on_ART']:
-                    # For numerical clinical data, use median
-                    median_val = cleaned_df[column].median()
-                    cleaned_df[column].fillna(median_val, inplace=True)
-                    validation_report['cleaning_applied'].append(
-                        f"Imputed {column} with median: {median_val:.2f}"
-                    )
-                elif column in ['Gender', 'ART_Regimen', 'WHO_Stage']:
-                    # For categorical, use mode
-                    mode_val = cleaned_df[column].mode()[0] if not cleaned_df[column].mode().empty else 'Unknown'
-                    cleaned_df[column].fillna(mode_val, inplace=True)
-                    validation_report['cleaning_applied'].append(
-                        f"Imputed {column} with mode: {mode_val}"
-                    )
-        
-        # Handle outliers for numerical columns
-        numerical_columns = ['Age', 'CD4_Count', 'Viral_Load', 'Months_on_ART']
-        for column in numerical_columns:
-            if column in cleaned_df.columns:
-                Q1 = cleaned_df[column].quantile(0.25)
-                Q3 = cleaned_df[column].quantile(0.75)
-                IQR = Q3 - Q1
-                lower_bound = Q1 - 1.5 * IQR
-                upper_bound = Q3 + 1.5 * IQR
-                
-                outliers = cleaned_df[(cleaned_df[column] < lower_bound) | (cleaned_df[column] > upper_bound)]
-                outlier_count = len(outliers)
-                
-                validation_report['outliers'][column] = {
-                    'count': outlier_count,
-                    'percentage': (outlier_count / len(cleaned_df)) * 100,
-                    'bounds': [lower_bound, upper_bound]
-                }
-                
-                if outlier_count > 0:
-                    # Cap outliers instead of removing
-                    cleaned_df[column] = np.where(cleaned_df[column] < lower_bound, lower_bound, cleaned_df[column])
-                    cleaned_df[column] = np.where(cleaned_df[column] > upper_bound, upper_bound, cleaned_df[column])
-                    
-                    validation_report['cleaning_applied'].append(
-                        f"Capped {outlier_count} outliers in {column} to IQR bounds"
-                    )
-        
-        # Validate data ranges
-        if 'CD4_Count' in cleaned_df.columns:
-            invalid_cd4 = cleaned_df[(cleaned_df['CD4_Count'] < 0) | (cleaned_df['CD4_Count'] > 3000)]
-            if len(invalid_cd4) > 0:
-                validation_report['data_quality_issues'].append(
-                    f"Invalid CD4 values: {len(invalid_cd4)} records outside 0-3000 range"
-                )
-                # Cap to valid range
-                cleaned_df['CD4_Count'] = cleaned_df['CD4_Count'].clip(0, 3000)
-        
-        if 'Viral_Load' in cleaned_df.columns:
-            invalid_vl = cleaned_df[cleaned_df['Viral_Load'] < 0]
-            if len(invalid_vl) > 0:
-                validation_report['data_quality_issues'].append(
-                    f"Invalid Viral Load values: {len(invalid_vl)} negative records"
-                )
-                cleaned_df['Viral_Load'] = cleaned_df['Viral_Load'].clip(0)
-        
-        if 'Age' in cleaned_df.columns:
-            invalid_age = cleaned_df[(cleaned_df['Age'] < 0) | (cleaned_df['Age'] > 120)]
-            if len(invalid_age) > 0:
-                validation_report['data_quality_issues'].append(
-                    f"Invalid Age values: {len(invalid_age)} records outside 0-120 range"
-                )
-                cleaned_df['Age'] = cleaned_df['Age'].clip(0, 120)
-        
-        validation_report['final_shape'] = cleaned_df.shape
-        
-        return cleaned_df, validation_report
     
     def generate_sample_data(self, clinic_type="urban"):
         """Generate realistic synthetic clinic data"""
@@ -942,214 +814,10 @@ class ClinicAnalytics:
         
         return analysis
     
-    def generate_comprehensive_recommendations(self, analysis, df, data_quality_report=None):
-        """Generate comprehensive, actionable recommendations with priority scoring"""
-        recommendations = {
-            'high_priority': [],
-            'medium_priority': [],
-            'low_priority': [],
-            'data_quality': []
-        }
-        
-        # Data Quality Recommendations
-        if data_quality_report and data_quality_report['data_quality_issues']:
-            critical_issues = [issue for issue in data_quality_report['data_quality_issues'] if 'CRITICAL' in issue]
-            if critical_issues:
-                recommendations['high_priority'].append({
-                    'title': 'Address Critical Data Quality Issues',
-                    'description': f"Found {len(critical_issues)} critical data quality issues affecting analysis reliability",
-                    'actions': [
-                        "Implement data validation protocols during entry",
-                        "Train staff on complete and accurate data collection",
-                        "Set up automated data quality checks",
-                        "Conduct regular data audits"
-                    ],
-                    'timeline': 'Immediate (1-2 weeks)',
-                    'resources': 'Data manager, IT support, staff training',
-                    'expected_impact': 'High - improves decision-making accuracy'
-                })
-        
-        # Clinical Performance Recommendations
-        # AHD Prevalence
-        if analysis['ahd_cases'] > 20:
-            recommendations['high_priority'].append({
-                'title': 'Reduce High AHD Prevalence',
-                'description': f"{analysis['ahd_cases']:.1f}% of patients have Advanced HIV Disease - exceeds acceptable threshold",
-                'actions': [
-                    "Implement same-day ART initiation protocol",
-                    "Enhance community testing and linkage programs",
-                    "Train staff on AHD package implementation",
-                    "Set up AHD patient tracking system",
-                    "Conduct root cause analysis for late presentation"
-                ],
-                'timeline': 'Urgent (2-4 weeks)',
-                'resources': 'Clinical team, community health workers, tracking system',
-                'expected_impact': 'High - reduces early mortality by 40%'
-            })
-        elif analysis['ahd_cases'] > 10:
-            recommendations['medium_priority'].append({
-                'title': 'Monitor Moderate AHD Cases',
-                'description': f"{analysis['ahd_cases']:.1f}% AHD prevalence needs close monitoring",
-                'actions': [
-                    "Strengthen early detection systems",
-                    "Implement rapid linkage to care",
-                    "Enhance patient education on early testing",
-                    "Monitor time-to-ART initiation"
-                ],
-                'timeline': 'Short-term (1-2 months)',
-                'resources': 'Clinical staff, educational materials',
-                'expected_impact': 'Medium - prevents progression to severe AHD'
-            })
-        
-        # Viral Suppression
-        suppression_gap = self.who_targets['viral_suppression'] - analysis['viral_suppression']
-        if suppression_gap > 20:
-            recommendations['high_priority'].append({
-                'title': 'Address Low Viral Suppression',
-                'description': f"Only {analysis['viral_suppression']:.1f}% suppression ({suppression_gap:.1f}% below WHO target)",
-                'actions': [
-                    "Implement enhanced adherence counseling",
-                    "Conduct regimen review for side effects",
-                    "Establish differentiated service delivery models",
-                    "Set up peer support programs",
-                    "Implement pharmacy refill tracking"
-                ],
-                'timeline': 'Immediate (2-4 weeks)',
-                'resources': 'Adherence counselors, peer educators, pharmacy staff',
-                'expected_impact': 'High - 20-30% improvement in suppression rates'
-            })
-        elif suppression_gap > 10:
-            recommendations['medium_priority'].append({
-                'title': 'Improve Viral Suppression Rates',
-                'description': f"{analysis['viral_suppression']:.1f}% suppression below target, needs improvement",
-                'actions': [
-                    "Focus on patients with unsuppressed viral load",
-                    "Implement targeted adherence support",
-                    "Review ART regimens for optimization",
-                    "Enhance patient education on adherence"
-                ],
-                'timeline': 'Short-term (1-3 months)',
-                'resources': 'Clinical team, educational resources',
-                'expected_impact': 'Medium - 15-20% improvement possible'
-            })
-        
-        # Patient Retention
-        if analysis['poor_retention'] > 20:
-            recommendations['high_priority'].append({
-                'title': 'Improve Patient Retention',
-                'description': f"{analysis['poor_retention']:.1f}% of patients missing multiple visits - high risk of loss to follow-up",
-                'actions': [
-                    "Implement appointment reminder system (SMS/calls)",
-                    "Establish community outreach and tracking",
-                    "Develop flexible clinic hours",
-                    "Set up patient navigation services",
-                    "Conduct exit interviews for lost patients"
-                ],
-                'timeline': 'Short-term (1-2 months)',
-                'resources': 'Community health workers, SMS system, navigation staff',
-                'expected_impact': 'High - 25-40% reduction in loss to follow-up'
-            })
-        elif analysis['poor_retention'] > 10:
-            recommendations['medium_priority'].append({
-                'title': 'Enhance Retention Strategies',
-                'description': f"{analysis['poor_retention']:.1f} retention issues detected",
-                'actions': [
-                    "Implement basic appointment reminders",
-                    "Train staff on retention strategies",
-                    "Monitor missed appointment patterns",
-                    "Develop patient feedback system"
-                ],
-                'timeline': 'Medium-term (2-4 months)',
-                'resources': 'Clinic staff, basic reminder system',
-                'expected_impact': 'Medium - 15-25% improvement in retention'
-            })
-        
-        # Population-Specific Recommendations
-        young_patients = df[df['Age'] < 25]
-        if len(young_patients) > 0:
-            young_suppression = (young_patients['Viral_Load'] < 1000).mean() * 100
-            if young_suppression < 70:
-                recommendations['medium_priority'].append({
-                    'title': 'Address Youth Engagement Challenges',
-                    'description': f"Young patients (18-25) have only {young_suppression:.1f}% viral suppression",
-                    'actions': [
-                        "Develop youth-friendly services",
-                        "Implement peer educator programs",
-                        "Create social media engagement strategies",
-                        "Provide mental health support for youth",
-                        "Establish youth support groups"
-                    ],
-                    'timeline': 'Medium-term (3-6 months)',
-                    'resources': 'Youth coordinators, peer educators, mental health support',
-                    'expected_impact': 'Medium - 20-30% improvement in youth outcomes'
-                })
-        
-        # CD4 Recovery
-        if analysis['avg_cd4'] < 300:
-            recommendations['medium_priority'].append({
-                'title': 'Address Slow Immune Recovery',
-                'description': f"Average CD4 count is {analysis['avg_cd4']:.0f} cells/mm³ - indicates suboptimal immune recovery",
-                'actions': [
-                    "Review patients with slow CD4 recovery",
-                    "Optimize ART regimens if needed",
-                    "Address comorbidities affecting recovery",
-                    "Enhance nutritional support",
-                    "Monitor for treatment failure"
-                ],
-                'timeline': 'Medium-term (2-4 months)',
-                'resources': 'Clinical team, nutritionist, lab support',
-                'expected_impact': 'Medium - improves long-term outcomes'
-            })
-        
-        # Positive Performance Recognition
-        if analysis['viral_suppression'] >= self.who_targets['viral_suppression']:
-            recommendations['low_priority'].append({
-                'title': 'Maintain Excellent Viral Suppression',
-                'description': f"Congratulations! {analysis['viral_suppression']:.1f}% exceeds WHO 90% target",
-                'actions': [
-                    "Continue current successful strategies",
-                    "Document and share best practices",
-                    "Monitor for any emerging challenges",
-                    "Celebrate team success"
-                ],
-                'timeline': 'Ongoing',
-                'resources': 'Minimal additional resources needed',
-                'expected_impact': 'Maintenance of excellent performance'
-            })
-        
-        if analysis['ahd_cases'] < 5:
-            recommendations['low_priority'].append({
-                'title': 'Sustain Low AHD Prevalence',
-                'description': f"Only {analysis['ahd_cases']:.1f}% AHD cases - excellent early detection performance",
-                'actions': [
-                    "Continue strong testing and linkage programs",
-                    "Maintain community engagement",
-                    "Monitor for any changes in presentation patterns",
-                    "Share successful strategies with other clinics"
-                ],
-                'timeline': 'Ongoing',
-                'resources': 'Current program maintenance',
-                'expected_impact': 'Sustained low AHD rates'
-            })
-        
-        return recommendations
-    
-    def generate_insights(self, analysis, df, data_quality_report=None):
-        """Generate smart insights from analysis with data quality considerations"""
+    def generate_insights(self, analysis, df):
+        """Generate smart insights from analysis"""
         insights = []
         
-        # Data quality insights
-        if data_quality_report and data_quality_report['data_quality_issues']:
-            critical_issues = [issue for issue in data_quality_report['data_quality_issues'] if 'CRITICAL' in issue]
-            if critical_issues:
-                insights.append({
-                    'type': '🚨 DATA QUALITY',
-                    'title': 'Critical Data Quality Issues',
-                    'message': f"Found {len(critical_issues)} critical data quality issues that may affect analysis accuracy",
-                    'recommendation': 'Review data collection processes and ensure complete required fields'
-                })
-        
-        # Clinical insights
         if analysis['ahd_cases'] > 20:
             insights.append({
                 'type': '🚨 CRITICAL',
@@ -1206,23 +874,6 @@ class ClinicAnalytics:
                 'title': 'CD4 Recovery Needs Attention',
                 'message': f"Average CD4 count is {analysis['avg_cd4']:.0f} cells/mm³",
                 'recommendation': 'Review patients with slow immune recovery'
-            })
-        
-        # Positive insights for good performance
-        if analysis['viral_suppression'] >= self.who_targets['viral_suppression']:
-            insights.append({
-                'type': '✅ EXCELLENT',
-                'title': 'Viral Suppression Target Achieved',
-                'message': f"Congratulations! {analysis['viral_suppression']:.1f}% exceeds WHO target",
-                'recommendation': 'Maintain current strategies and share best practices'
-            })
-        
-        if analysis['ahd_cases'] < 5:
-            insights.append({
-                'type': '✅ EXCELLENT',
-                'title': 'Low AHD Prevalence',
-                'message': f"Only {analysis['ahd_cases']:.1f}% AHD cases - excellent early detection",
-                'recommendation': 'Continue strong testing and linkage programs'
             })
         
         return insights
@@ -1302,74 +953,61 @@ with tab1:
         X_input = pd.DataFrame([input_data_dict])[feature_names].astype(float)
 
         if st.sidebar.button("🔍 Predict AHD Risk", type="primary"):
-            # Validate input data
-            validation_errors = []
-            if cd4 <= 0:
-                validation_errors.append("CD4 count should be positive")
-            if vl < 0:
-                validation_errors.append("Viral load cannot be negative")
-            if age <= 0:
-                validation_errors.append("Age must be positive")
-            
-            if validation_errors:
-                for error in validation_errors:
-                    st.error(f"⚠️ {error}")
+            pred = model.predict(X_input)[0]
+            proba = model.predict_proba(X_input)[0][1]
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("AHD Risk", "High Risk" if int(pred) == 1 else "Low Risk", 
+                         delta="Clinical review needed" if int(pred) == 1 else "Routine care")
+            with col2:
+                st.metric("Risk Probability", f"{proba:.1%}")
+
+            st.progress(proba)
+            if proba > 0.75:
+                st.error("🔴 **High Risk** – Immediate clinical review recommended")
+            elif proba > 0.45:
+                st.warning("🟡 **Moderate Risk** – Close monitoring advised")
             else:
-                pred = model.predict(X_input)[0]
-                proba = model.predict_proba(X_input)[0][1]
+                st.success("🟢 **Low Risk** – Continue standard care")
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.metric("AHD Risk", "High Risk" if int(pred) == 1 else "Low Risk", 
-                             delta="Clinical review needed" if int(pred) == 1 else "Routine care")
-                with col2:
-                    st.metric("Risk Probability", f"{proba:.1%}")
+            st.subheader("🎯 Clinical Interpretation")
+            interpretation = chatbot.interpret_prediction(pred, proba, input_data_dict)
+            st.markdown(interpretation)
 
-                st.progress(proba)
-                if proba > 0.75:
-                    st.error("🔴 **High Risk** – Immediate clinical review recommended")
-                elif proba > 0.45:
-                    st.warning("🟡 **Moderate Risk** – Close monitoring advised")
-                else:
-                    st.success("🟢 **Low Risk** – Continue standard care")
-
-                st.subheader("🎯 Clinical Interpretation")
-                interpretation = chatbot.interpret_prediction(pred, proba, input_data_dict)
-                st.markdown(interpretation)
-
-                st.subheader("📋 Input Features Analysis")
+            st.subheader("📋 Input Features Analysis")
+            
+            features_df = pd.DataFrame({
+                'Feature': list(input_data_dict.keys()),
+                'Value': list(input_data_dict.values()),
+                'Clinical Significance': [
+                    'Demographic factor' if 'Age' in k or 'Sex' in k else
+                    'Nutritional indicator' if 'Weight' in k or 'Height' in k or 'BMI' in k else
+                    'Critical immunologic marker' if 'CD4' in k else
+                    'Virologic marker' if 'VL' in k else
+                    'Treatment adherence indicator' if 'Months' in k else
+                    'Disease severity indicator' if 'WHO' in k else
+                    'Risk stratification' if 'risk' in k else
+                    'Data quality indicator' if 'Missing' in k else 'Other'
+                    for k in input_data_dict.keys()
+                ]
+            })
+            
+            with st.expander("📊 Detailed Feature Analysis", expanded=True):
+                st.dataframe(features_df, use_container_width=True, hide_index=True)
                 
-                features_df = pd.DataFrame({
-                    'Feature': list(input_data_dict.keys()),
-                    'Value': list(input_data_dict.values()),
-                    'Clinical Significance': [
-                        'Demographic factor' if 'Age' in k or 'Sex' in k else
-                        'Nutritional indicator' if 'Weight' in k or 'Height' in k or 'BMI' in k else
-                        'Critical immunologic marker' if 'CD4' in k else
-                        'Virologic marker' if 'VL' in k else
-                        'Treatment adherence indicator' if 'Months' in k else
-                        'Disease severity indicator' if 'WHO' in k else
-                        'Risk stratification' if 'risk' in k else
-                        'Data quality indicator' if 'Missing' in k else 'Other'
-                        for k in input_data_dict.keys()
-                    ]
-                })
-                
-                with st.expander("📊 Detailed Feature Analysis", expanded=True):
-                    st.dataframe(features_df, use_container_width=True, hide_index=True)
-                    
-                    st.markdown("**🔍 Key Feature Insights:**")
-                    if cd4 < 200:
-                        st.markdown(f"- **CD4 {cd4}**: Below AHD threshold (<200 cells/mm³)")
-                    if vl > 1000:
-                        st.markdown(f"- **Viral Load {vl:,}**: Unsuppressed (≥1000 copies/mL)")
-                    if bmi < 18.5:
-                        st.markdown(f"- **BMI {bmi:.1f}**: Underweight, consider nutritional support")
-                    if who_stage in [3, 4]:
-                        st.markdown(f"- **WHO Stage {who_stage}**: Advanced disease presentation")
+                st.markdown("**🔍 Key Feature Insights:**")
+                if cd4 < 200:
+                    st.markdown(f"- **CD4 {cd4}**: Below AHD threshold (<200 cells/mm³)")
+                if vl > 1000:
+                    st.markdown(f"- **Viral Load {vl:,}**: Unsuppressed (≥1000 copies/mL)")
+                if bmi < 18.5:
+                    st.markdown(f"- **BMI {bmi:.1f}**: Underweight, consider nutritional support")
+                if who_stage in [3, 4]:
+                    st.markdown(f"- **WHO Stage {who_stage}**: Advanced disease presentation")
 
 # -------------------------------
-# TAB 2: Enhanced Analytics Dashboard with Comprehensive Recommendations
+# TAB 2: Enhanced Analytics Dashboard
 # -------------------------------
 with tab2:
     st.subheader("🏥 Clinic Performance Analytics Dashboard")
@@ -1385,7 +1023,7 @@ with tab2:
         uploaded_file = st.file_uploader(
             "Upload CSV file with patient data", 
             type=['csv'],
-            help="File should contain: Patient_ID, Age, Gender, CD4_Count, Viral_Load, WHO_Stage, etc."
+            help="File should contain: Patient_ID, Age, Gender, CD4_Count, Viral_Load, WHO_Stage, Months_on_ART, etc."
         )
     
     with col2:
@@ -1399,49 +1037,11 @@ with tab2:
     # Data management
     current_data = None
     data_source = None
-    data_quality_report = None
     
     if uploaded_file is not None:
-        try:
-            current_data = pd.read_csv(uploaded_file)
-            data_source = "Uploaded File"
-            
-            # Validate and clean data
-            with st.spinner("🔍 Validating and cleaning data..."):
-                current_data, data_quality_report = analytics_engine.validate_and_clean_data(current_data)
-            
-            st.success(f"✅ Successfully loaded {len(current_data)} patient records")
-            
-            # Show data quality summary
-            if data_quality_report and data_quality_report['data_quality_issues']:
-                st.warning(f"⚠️ Found {len(data_quality_report['data_quality_issues'])} data quality issues")
-                
-                with st.expander("📋 Data Quality Report Details"):
-                    st.write("**Original Data Shape:**", data_quality_report['original_shape'])
-                    st.write("**Final Data Shape:**", data_quality_report['final_shape'])
-                    
-                    if data_quality_report['missing_values']:
-                        st.subheader("Missing Values Summary")
-                        missing_df = pd.DataFrame(data_quality_report['missing_values']).T
-                        st.dataframe(missing_df)
-                    
-                    if data_quality_report['outliers']:
-                        st.subheader("Outliers Detected")
-                        outliers_df = pd.DataFrame(data_quality_report['outliers']).T
-                        st.dataframe(outliers_df)
-                    
-                    if data_quality_report['data_quality_issues']:
-                        st.subheader("Data Quality Issues")
-                        for issue in data_quality_report['data_quality_issues']:
-                            st.write(f"- {issue}")
-                    
-                    if data_quality_report['cleaning_applied']:
-                        st.subheader("Cleaning Actions Applied")
-                        for action in data_quality_report['cleaning_applied']:
-                            st.write(f"- {action}")
-                            
-        except Exception as e:
-            st.error(f"❌ Error loading file: {str(e)}")
+        current_data = pd.read_csv(uploaded_file)
+        data_source = "Uploaded File"
+        st.success(f"✅ Successfully loaded {len(current_data)} patient records")
         
     elif demo_option != "Select sample...":
         clinic_type = "urban" if "Urban" in demo_option else "rural"
@@ -1456,8 +1056,7 @@ with tab2:
         # Perform analysis
         with st.spinner("🔍 Analyzing clinic data..."):
             analysis = analytics_engine.analyze_clinic_data(current_data)
-            insights = analytics_engine.generate_insights(analysis, current_data, data_quality_report)
-            recommendations = analytics_engine.generate_comprehensive_recommendations(analysis, current_data, data_quality_report)
+            insights = analytics_engine.generate_insights(analysis, current_data)
         
         # Key Metrics Dashboard
         st.markdown("### 📈 Key Performance Indicators")
@@ -1499,97 +1098,279 @@ with tab2:
             )
             st.caption("Missed ≤1 visit")
         
-        # Insights and Recommendations
+        # Insights and Recommendations - FIXED READABILITY
         st.markdown("### 💡 Smart Insights & Recommendations")
         
         if insights:
             for insight in insights:
+                # Use different background colors and better styling based on severity
                 if 'CRITICAL' in insight['type']:
-                    st.markdown(f"""
-                    <div style='background-color: #ffebee; border-left: 6px solid #d32f2f; padding: 15px; margin: 10px 0; border-radius: 5px;'>
-                        <h4>{insight['type']}: {insight['title']}</h4>
-                        <p><strong>{insight['message']}</strong></p>
-                        <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    bg_color = '#ffebee'  # Light red background
+                    border_color = '#d32f2f'  # Dark red border
+                    text_color = '#b71c1c'  # Dark red text
+                    icon = '🚨'
                 elif 'WARNING' in insight['type']:
-                    st.markdown(f"""
-                    <div style='background-color: #fff3e0; border-left: 6px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 5px;'>
-                        <h4>{insight['type']}: {insight['title']}</h4>
-                        <p><strong>{insight['message']}</strong></p>
-                        <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div style='background-color: #e8f5e8; border-left: 6px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px;'>
-                        <h4>{insight['type']}: {insight['title']}</h4>
-                        <p><strong>{insight['message']}</strong></p>
-                        <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    bg_color = '#fff3e0'  # Light orange background
+                    border_color = '#f57c00'  # Orange border
+                    text_color = '#e65100'  # Dark orange text
+                    icon = '⚠️'
+                elif 'TARGETED' in insight['type']:
+                    bg_color = '#e8f5e8'  # Light green background
+                    border_color = '#388e3c'  # Green border
+                    text_color = '#1b5e20'  # Dark green text
+                    icon = '🎯'
+                else:  # MONITOR
+                    bg_color = '#e3f2fd'  # Light blue background
+                    border_color = '#1976d2'  # Blue border
+                    text_color = '#0d47a1'  # Dark blue text
+                    icon = '📊'
+                
+                st.markdown(f"""
+                <div style='
+                    padding: 16px; 
+                    border-radius: 8px; 
+                    border-left: 6px solid {border_color}; 
+                    background-color: {bg_color}; 
+                    margin: 12px 0;
+                    border: 1px solid {border_color}40;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                '>
+                <div style='display: flex; align-items: center; margin-bottom: 8px;'>
+                    <span style='font-size: 20px; margin-right: 8px;'>{icon}</span>
+                    <h4 style='margin: 0; color: {text_color}; font-weight: bold;'>{insight['type']}: {insight['title']}</h4>
+                </div>
+                <p style='margin: 8px 0; font-size: 16px; font-weight: 600; color: #333;'>{insight['message']}</p>
+                <div style='display: flex; align-items: center; margin-top: 12px; padding: 8px; background-color: rgba(255,255,255,0.7); border-radius: 4px;'>
+                    <span style='font-size: 18px; margin-right: 8px;'>💡</span>
+                    <p style='margin: 0; font-style: normal; font-weight: 500; color: #555;'><strong>Recommendation:</strong> {insight['recommendation']}</p>
+                </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.success("🎉 Excellent! Your clinic is meeting or exceeding most performance targets!")
         
-        # Comprehensive Recommendations Section
-        st.markdown("### 🎯 Comprehensive Action Plan")
+        # Detailed Analysis Section - KEEPING ALL GRAPHS FROM ORIGINAL
+        st.markdown("### 📊 Detailed Analysis")
         
-        # High Priority Recommendations
-        if recommendations['high_priority']:
-            st.markdown("#### 🔴 High Priority Actions (Address Immediately)")
-            for i, rec in enumerate(recommendations['high_priority'], 1):
-                with st.expander(f"{i}. {rec['title']}", expanded=True):
-                    st.write(f"**Description:** {rec['description']}")
-                    st.write("**Recommended Actions:**")
-                    for action in rec['actions']:
-                        st.write(f"- {action}")
-                    st.write(f"**Timeline:** {rec['timeline']}")
-                    st.write(f"**Resources Needed:** {rec['resources']}")
-                    st.write(f"**Expected Impact:** {rec['expected_impact']}")
+        tab_analytics1, tab_analytics2, tab_analytics3, tab_analytics4 = st.tabs(["Clinical Health", "Patient Demographics", "Treatment Patterns", "Data Explorer"])
         
-        # Medium Priority Recommendations
-        if recommendations['medium_priority']:
-            st.markdown("#### 🟡 Medium Priority Actions (Address Soon)")
-            for i, rec in enumerate(recommendations['medium_priority'], 1):
-                with st.expander(f"{i}. {rec['title']}"):
-                    st.write(f"**Description:** {rec['description']}")
-                    st.write("**Recommended Actions:**")
-                    for action in rec['actions']:
-                        st.write(f"- {action}")
-                    st.write(f"**Timeline:** {rec['timeline']}")
-                    st.write(f"**Resources Needed:** {rec['resources']}")
-                    st.write(f"**Expected Impact:** {rec['expected_impact']}")
+        with tab_analytics1:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**CD4 Count Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create CD4 categories
+                cd4_bins = [0, 200, 350, 500, float('inf')]
+                cd4_labels = ['Critical (<200)', 'Advanced (200-350)', 'Good (350-500)', 'Excellent (>500)']
+                current_data['CD4_Category'] = pd.cut(current_data['CD4_Count'], bins=cd4_bins, labels=cd4_labels)
+                
+                cd4_counts = current_data['CD4_Category'].value_counts().reindex(cd4_labels)
+                colors = ['#ff4444', '#ffaa00', '#66bb6a', '#2e7d32']
+                
+                bars = ax.bar(cd4_labels, cd4_counts.values, color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+                ax.set_ylabel('Number of Patients', fontweight='bold')
+                ax.set_title('CD4 Health Distribution', fontweight='bold', fontsize=14)
+                plt.xticks(rotation=45, ha='right')
+                ax.grid(axis='y', alpha=0.3)
+                
+                # Add value labels
+                for bar, count in zip(bars, cd4_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                
+                st.pyplot(fig)
+                
+                # CD4 insights
+                with st.expander("📋 CD4 Insights"):
+                    critical_pct = (current_data['CD4_Count'] < 200).mean() * 100
+                    excellent_pct = (current_data['CD4_Count'] >= 500).mean() * 100
+                    st.write(f"""
+                    - **Critical CD4 (<200)**: {critical_pct:.1f}% of patients
+                    - **Excellent CD4 (≥500)**: {excellent_pct:.1f}% of patients  
+                    - **Average CD4**: {analysis['avg_cd4']:.0f} cells/mm³
+                    - **Clinical Goal**: >85% patients with CD4 >350 cells/mm³
+                    """)
+            
+            with col2:
+                st.write("**Viral Load Status**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                
+                # Create VL categories
+                vl_bins = [0, 50, 1000, 10000, float('inf')]
+                vl_labels = ['Undetectable (<50)', 'Suppressed (50-1000)', 'Unsuppressed (1000-10000)', 'High (>10000)']
+                current_data['VL_Category'] = pd.cut(current_data['Viral_Load'], bins=vl_bins, labels=vl_labels)
+                
+                vl_counts = current_data['VL_Category'].value_counts().reindex(vl_labels)
+                colors = ['#2e7d32', '#66bb6a', '#ffaa00', '#ff4444']
+                
+                bars = ax.bar(vl_labels, vl_counts.values, color=colors, alpha=0.8, edgecolor='black', linewidth=0.5)
+                ax.set_ylabel('Number of Patients', fontweight='bold')
+                ax.set_title('Viral Load Control', fontweight='bold', fontsize=14)
+                plt.xticks(rotation=45, ha='right')
+                ax.grid(axis='y', alpha=0.3)
+                
+                # Add value labels
+                for bar, count in zip(bars, vl_counts.values):
+                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.5,
+                           f'{count}', ha='center', va='bottom', fontweight='bold', fontsize=10)
+                
+                st.pyplot(fig)
+                
+                # VL insights
+                with st.expander("📋 Viral Load Insights"):
+                    suppressed_pct = analysis['viral_suppression']
+                    undetectable_pct = analysis['undetectable']
+                    st.write(f"""
+                    - **Suppressed (<1000)**: {suppressed_pct:.1f}% of patients
+                    - **Undetectable (<50)**: {undetectable_pct:.1f}% of patients
+                    - **WHO Target**: >90% viral suppression
+                    - **Gap to Target**: {max(0, 90 - suppressed_pct):.1f}%
+                    """)
         
-        # Low Priority Recommendations
-        if recommendations['low_priority']:
-            st.markdown("#### 🟢 Low Priority Actions (Maintain Excellence)")
-            for i, rec in enumerate(recommendations['low_priority'], 1):
-                with st.expander(f"{i}. {rec['title']}"):
-                    st.write(f"**Description:** {rec['description']}")
-                    st.write("**Recommended Actions:**")
-                    for action in rec['actions']:
-                        st.write(f"- {action}")
-                    st.write(f"**Timeline:** {rec['timeline']}")
-                    st.write(f"**Resources Needed:** {rec['resources']}")
-                    st.write(f"**Expected Impact:** {rec['expected_impact']}")
+        with tab_analytics2:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**Age Distribution**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Age'], bins=15, alpha=0.7, color='#2196f3', edgecolor='black')
+                ax.set_xlabel('Age (years)')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Patient Age Distribution', fontweight='bold')
+                ax.axvline(current_data['Age'].mean(), color='red', linestyle='--', linewidth=2, 
+                          label=f"Mean: {current_data['Age'].mean():.1f} years")
+                ax.legend()
+                ax.grid(alpha=0.3)
+                st.pyplot(fig)
+                
+                # Age insights
+                with st.expander("📋 Age Insights"):
+                    young_patients = current_data[current_data['Age'] < 25]
+                    older_patients = current_data[current_data['Age'] > 50]
+                    st.write(f"""
+                    - **Young patients (18-25)**: {len(young_patients)} patients ({len(young_patients)/len(current_data)*100:.1f}%)
+                    - **Older patients (50+)**: {len(older_patients)} patients ({len(older_patients)/len(current_data)*100:.1f}%)
+                    - **Average age**: {current_data['Age'].mean():.1f} years
+                    - **Age range**: {current_data['Age'].min()} - {current_data['Age'].max()} years
+                    """)
+            
+            with col2:
+                st.write("**Gender Distribution**")
+                gender_counts = current_data['Gender'].value_counts()
+                fig, ax = plt.subplots(figsize=(8, 6))
+                colors = ['#64b5f6', '#f06292']  # Blue for Male, Pink for Female
+                wedges, texts, autotexts = ax.pie(gender_counts.values, labels=gender_counts.index, autopct='%1.1f%%', 
+                      colors=colors, startangle=90)
+                ax.set_title('Patient Gender Distribution', fontweight='bold')
+                
+                # Improve autopct styling
+                for autotext in autotexts:
+                    autotext.set_color('white')
+                    autotext.set_fontweight('bold')
+                    autotext.set_fontsize(10)
+                
+                st.pyplot(fig)
+                
+                # Gender insights
+                with st.expander("📋 Gender Insights"):
+                    for gender, count in gender_counts.items():
+                        pct = count / len(current_data) * 100
+                        st.write(f"- **{gender}**: {count} patients ({pct:.1f}%)")
         
-        # Export Section with Comprehensive Report
+        with tab_analytics3:
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.write("**ART Regimen Distribution**")
+                regimen_counts = current_data['ART_Regimen'].value_counts()
+                fig, ax = plt.subplots(figsize=(10, 6))
+                colors = plt.cm.Set3(np.linspace(0, 1, len(regimen_counts)))
+                wedges, texts, autotexts = ax.pie(regimen_counts.values, labels=regimen_counts.index, autopct='%1.1f%%', 
+                                                 startangle=90, colors=colors)
+                ax.set_title('ART Regimen Usage', fontweight='bold')
+                
+                # Improve autopct styling
+                for autotext in autotexts:
+                    autotext.set_color('black')
+                    autotext.set_fontweight('bold')
+                
+                st.pyplot(fig)
+                
+                # Regimen insights
+                with st.expander("📋 Regimen Insights"):
+                    st.write("**Most Common Regimens:**")
+                    for regimen, count in regimen_counts.head(3).items():
+                        pct = count / len(current_data) * 100
+                        st.write(f"- {regimen}: {pct:.1f}%")
+            
+            with col2:
+                st.write("**Treatment Duration**")
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.hist(current_data['Months_on_ART'], bins=20, alpha=0.7, color='#4caf50', edgecolor='black')
+                ax.set_xlabel('Months on ART')
+                ax.set_ylabel('Number of Patients')
+                ax.set_title('Treatment Duration Distribution', fontweight='bold')
+                ax.axvline(current_data['Months_on_ART'].mean(), color='red', linestyle='--', linewidth=2,
+                          label=f"Mean: {current_data['Months_on_ART'].mean():.1f} months")
+                ax.legend()
+                ax.grid(alpha=0.3)
+                st.pyplot(fig)
+                
+                # Treatment duration insights
+                with st.expander("📋 Treatment Duration Insights"):
+                    new_patients = (current_data['Months_on_ART'] < 6).sum()
+                    experienced_patients = (current_data['Months_on_ART'] >= 12).sum()
+                    st.write(f"""
+                    - **New patients (<6 months)**: {new_patients} ({new_patients/len(current_data)*100:.1f}%)
+                    - **Experienced (≥12 months)**: {experienced_patients} ({experienced_patients/len(current_data)*100:.1f}%)
+                    - **Average duration**: {current_data['Months_on_ART'].mean():.1f} months
+                    - **Longest duration**: {current_data['Months_on_ART'].max()} months
+                    """)
+        
+        with tab_analytics4:
+            st.write("**Patient Data Explorer**")
+            
+            # Data summary
+            st.write("**Data Summary:**")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Patients", len(current_data))
+            with col2:
+                st.metric("Data Columns", len(current_data.columns))
+            with col3:
+                completeness = 100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100)
+                st.metric("Data Completeness", f"{completeness:.1f}%")
+            with col4:
+                st.metric("Analysis Date", datetime.now().strftime('%Y-%m-%d'))
+            
+            # Interactive dataframe
+            st.dataframe(current_data, use_container_width=True, height=400)
+            
+            # Data quality insights
+            with st.expander("📋 Data Quality Report"):
+                missing_data = current_data.isnull().sum()
+                if missing_data.sum() > 0:
+                    st.warning("⚠️ **Missing Data Detected:**")
+                    for col, missing_count in missing_data[missing_data > 0].items():
+                        missing_pct = (missing_count / len(current_data)) * 100
+                        st.write(f"- {col}: {missing_count} missing values ({missing_pct:.1f}%)")
+                else:
+                    st.success("✅ **Excellent Data Quality**: No missing values detected")
+        
+        # Export Section - INCLUDING COMPREHENSIVE ACTION PLAN IN REPORT ONLY
         st.markdown("---")
-        st.markdown("### 📥 Export Comprehensive Analysis Report")
+        st.markdown("### 📥 Export Analysis Report")
         
-        # Generate comprehensive report
+        # Generate comprehensive report with action plan
         report_text = f"""
 COMPREHENSIVE CLINIC PERFORMANCE ANALYSIS REPORT
 ================================================
 Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}
 Data Source: {data_source}
 Total Patients Analyzed: {len(current_data)}
-
-EXECUTIVE SUMMARY:
-------------------
-Overall Clinic Performance: {'EXCELLENT' if not recommendations['high_priority'] else 'NEEDS IMPROVEMENT'}
-Key Strengths: {len(recommendations['low_priority'])} areas of excellence
-Priority Improvements: {len(recommendations['high_priority'])} urgent actions needed
 
 KEY PERFORMANCE INDICATORS:
 ---------------------------
@@ -1598,77 +1379,43 @@ KEY PERFORMANCE INDICATORS:
 • Average CD4 Count: {analysis['avg_cd4']:.0f} cells/mm³
 • Patient Retention: {analysis['good_retention']:.1f}% (Target: >90%) - {'✓ MET' if analysis['good_retention'] >= 90 else '✗ NOT MET'}
 
-DATA QUALITY ASSESSMENT:
-------------------------
-• Data Completeness: {100 - (current_data.isnull().sum().sum() / (len(current_data) * len(current_data.columns)) * 100):.1f}%
-• Data Quality Issues: {len(data_quality_report['data_quality_issues']) if data_quality_report else 0}
+CLINICAL INSIGHTS:
+------------------
+• Total patients with critical CD4 (<200): {(current_data['CD4_Count'] < 200).sum()}
+• Patients with undetectable viral load: {(current_data['Viral_Load'] < 50).sum()}
+• Average treatment duration: {analysis['avg_art_duration']:.1f} months
+• Patients with poor retention: {(current_data['Missed_Visits'] > 2).sum()}
+
+COMPREHENSIVE ACTION PLAN:
+==========================
 
 PRIORITY RECOMMENDATIONS:
-=========================
-
-HIGH PRIORITY ACTIONS (Address within 2-4 weeks):
--------------------------------------------------
+-------------------------
 """
         
-        for i, rec in enumerate(recommendations['high_priority'], 1):
-            report_text += f"\n{i}. {rec['title']}"
-            report_text += f"\n   Description: {rec['description']}"
-            report_text += f"\n   Timeline: {rec['timeline']}"
-            report_text += f"\n   Expected Impact: {rec['expected_impact']}"
-            report_text += f"\n   Key Actions:"
-            for action in rec['actions'][:3]:  # Include top 3 actions
-                report_text += f"\n     - {action}"
-            report_text += "\n"
+        for i, insight in enumerate(insights, 1):
+            report_text += f"\n{i}. {insight['type']}: {insight['title']}"
+            report_text += f"\n   - Issue: {insight['message']}"
+            report_text += f"\n   - Recommendation: {insight['recommendation']}\n"
         
         report_text += f"""
-MEDIUM PRIORITY ACTIONS (Address within 1-3 months):
-----------------------------------------------------
-"""
-        
-        for i, rec in enumerate(recommendations['medium_priority'], 1):
-            report_text += f"\n{i}. {rec['title']}"
-            report_text += f"\n   Description: {rec['description']}"
-            report_text += f"\n   Timeline: {rec['timeline']}"
-            report_text += f"\n   Expected Impact: {rec['expected_impact']}"
-            report_text += f"\n   Key Actions:"
-            for action in rec['actions'][:2]:  # Include top 2 actions
-                report_text += f"\n     - {action}"
-            report_text += "\n"
-        
-        report_text += f"""
-AREAS OF EXCELLENCE (Maintain and share best practices):
---------------------------------------------------------
-"""
-        
-        for i, rec in enumerate(recommendations['low_priority'], 1):
-            report_text += f"\n{i}. {rec['title']}"
-            report_text += f"\n   Description: {rec['description']}"
-            report_text += "\n"
-        
-        report_text += f"""
-IMPLEMENTATION ROADMAP:
------------------------
-Week 1-2: {len([r for r in recommendations['high_priority'] if 'Immediate' in r.get('timeline', '')])} immediate actions
-Month 1: {len(recommendations['high_priority'])} high priority projects
-Month 2-3: {len(recommendations['medium_priority'])} medium priority initiatives
-Ongoing: {len(recommendations['low_priority'])} maintenance activities
 
-RESOURCE REQUIREMENTS:
-----------------------
-• Staff Training: {sum(1 for r in recommendations['high_priority'] + recommendations['medium_priority'] if 'training' in r.get('resources', '').lower())} programs needed
-• System Improvements: {sum(1 for r in recommendations['high_priority'] + recommendations['medium_priority'] if 'system' in r.get('resources', '').lower())} implementations
-• Community Engagement: {sum(1 for r in recommendations['high_priority'] + recommendations['medium_priority'] if 'community' in r.get('resources', '').lower())} initiatives
+IMPLEMENTATION TIMELINE:
+------------------------
+• Immediate (1-2 weeks): Address critical data quality and high AHD prevalence
+• Short-term (1-3 months): Improve viral suppression and retention
+• Medium-term (3-6 months): Youth engagement and CD4 recovery initiatives
+• Ongoing: Maintain excellence in achieved targets
 
-EXPECTED OUTCOMES:
-------------------
-• Viral Suppression Improvement: {max(0, 90 - analysis['viral_suppression']):.1f}% gap to close
-• AHD Reduction: {max(0, analysis['ahd_cases'] - 10):.1f}% reduction needed
-• Retention Improvement: {max(0, 90 - analysis['good_retention']):.1f}% gap to close
+DATA QUALITY SUMMARY:
+---------------------
+• Total records: {len(current_data)}
+• Data completeness: {completeness:.1f}%
+• Analysis period: Up to {datetime.now().strftime('%B %Y')}
 
 ---
 Report generated by AHD Copilot Analytics Dashboard
 For clinical decision support and quality improvement planning
-Contact: HIV Program Manager for implementation support
 """
         
         col1, col2 = st.columns(2)
@@ -1677,7 +1424,7 @@ Contact: HIV Program Manager for implementation support
             st.download_button(
                 label="📄 Download Comprehensive Report",
                 data=report_text,
-                file_name=f"clinic_comprehensive_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+                file_name=f"clinic_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
                 mime="text/plain",
                 use_container_width=True
             )
@@ -1686,9 +1433,9 @@ Contact: HIV Program Manager for implementation support
             # Convert DataFrame to CSV for download
             csv = current_data.to_csv(index=False)
             st.download_button(
-                label="📊 Download Analyzed Data (CSV)",
+                label="📊 Download Raw Data (CSV)",
                 data=csv,
-                file_name=f"clinic_analyzed_data_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+                file_name=f"clinic_analysis_data_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                 mime="text/csv",
                 use_container_width=True
             )
