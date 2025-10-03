@@ -14,15 +14,9 @@ warnings.filterwarnings('ignore')
 # -------------------------------
 st.set_page_config(page_title="AHD Copilot", layout="wide", page_icon="🎗️")
 
-# Custom CSS for red ribbon and better styling
+# Custom CSS for red ribbon only
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #d32f2f;
-        text-align: center;
-        margin-bottom: 1rem;
-    }
     .red-ribbon {
         background-color: #d32f2f;
         color: white;
@@ -32,47 +26,6 @@ st.markdown("""
         margin-bottom: 2rem;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .metric-card {
-        background-color: #f5f5f5;
-        padding: 15px;
-        border-radius: 10px;
-        border-left: 4px solid #d32f2f;
-    }
-    .insight-critical {
-        background-color: #ffebee;
-        border-left: 6px solid #d32f2f;
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 5px;
-    }
-    .insight-warning {
-        background-color: #fff3e0;
-        border-left: 6px solid #ff9800;
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 5px;
-    }
-    .insight-good {
-        background-color: #e8f5e8;
-        border-left: 6px solid #4caf50;
-        padding: 15px;
-        margin: 10px 0;
-        border-radius: 5px;
-    }
-    .recommendation-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        margin: 10px 0;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    .quick-action-btn {
-        background-color: #d32f2f !important;
-        color: white !important;
-        border: none !important;
-        margin: 5px !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -81,6 +34,22 @@ st.markdown("""
 This tool supports clinicians in **detecting Advanced HIV Disease (AHD)**,  
 exploring analytics, and interacting with **comprehensive HIV/AIDS expert chatbot**.  
 """)
+
+# -------------------------------
+# Load Model - FIXED VERSION
+# -------------------------------
+try:
+    deploy = joblib.load("ahd_model_C_hybrid_fixed.pkl")
+    model = deploy['model']
+    feature_names = deploy['feature_names']
+    model_loaded = True
+    st.sidebar.success("✅ Model loaded successfully")
+except Exception as e:
+    st.error(f"⚠️ Could not load model: {e}")
+    st.info("🔧 Using demo mode for predictions")
+    model_loaded = False
+    model = None
+    feature_names = []
 
 # -------------------------------
 # ENHANCED COMPREHENSIVE HIV/AIDS EXPERT CHATBOT CLASS
@@ -1537,7 +1506,7 @@ with tab2:
             for insight in insights:
                 if 'CRITICAL' in insight['type']:
                     st.markdown(f"""
-                    <div class='insight-critical'>
+                    <div style='background-color: #ffebee; border-left: 6px solid #d32f2f; padding: 15px; margin: 10px 0; border-radius: 5px;'>
                         <h4>{insight['type']}: {insight['title']}</h4>
                         <p><strong>{insight['message']}</strong></p>
                         <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
@@ -1545,7 +1514,7 @@ with tab2:
                     """, unsafe_allow_html=True)
                 elif 'WARNING' in insight['type']:
                     st.markdown(f"""
-                    <div class='insight-warning'>
+                    <div style='background-color: #fff3e0; border-left: 6px solid #ff9800; padding: 15px; margin: 10px 0; border-radius: 5px;'>
                         <h4>{insight['type']}: {insight['title']}</h4>
                         <p><strong>{insight['message']}</strong></p>
                         <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
@@ -1553,7 +1522,7 @@ with tab2:
                     """, unsafe_allow_html=True)
                 else:
                     st.markdown(f"""
-                    <div class='insight-good'>
+                    <div style='background-color: #e8f5e8; border-left: 6px solid #4caf50; padding: 15px; margin: 10px 0; border-radius: 5px;'>
                         <h4>{insight['type']}: {insight['title']}</h4>
                         <p><strong>{insight['message']}</strong></p>
                         <p>💡 <strong>Recommendation:</strong> {insight['recommendation']}</p>
